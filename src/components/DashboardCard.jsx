@@ -1,101 +1,83 @@
 import React from "react";
+import DashboardCard from "./DashboardCard";
 
-function DashboardCard() {
+function Hero() {
   return (
-    <div className="relative flex justify-center">
+    <section
+      id="home"
+      className="pt-24 relative min-h-screen flex items-center overflow-hidden"
+    >
+      {/* Background Gradient */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_40%,rgba(255,193,7,0.15),transparent_60%)]"></div>
 
-      {/* Glow Background */}
-      <div className="absolute w-[500px] h-[500px] bg-yellow-500/25 blur-[120px] rounded-full"></div>
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-      {/* Main Card */}
-      <div className="relative w-[360px] bg-[#0c0c0c] border border-yellow-500/30 rounded-3xl p-6 shadow-xl">
+          {/* Left Content */}
+          <div className="space-y-8">
 
-        {/* Top Badge */}
-        <div className="absolute -top-5 right-6 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-5 py-2 rounded-xl text-sm font-semibold shadow-lg">
-          <div>24K Pure</div>
-          <div className="text-xs">99.99% Gold</div>
-        </div>
-
-        {/* Portfolio Section */}
-        <div className="bg-[#1a1a1a] rounded-2xl p-6 text-center mb-6">
-          <div className="flex justify-center items-center gap-2 mb-2">
-            <span className="text-gray-400 text-sm">
-              Your Gold Portfolio
-            </span>
-
-            <span className="bg-yellow-500/20 text-yellow-400 text-xs px-2 py-1 rounded-full">
-              +12.4%
-            </span>
-          </div>
-
-          <div className="text-3xl font-bold text-white mb-1">
-            ₹2,45,830
-          </div>
-
-          <div className="text-gray-400 text-sm">
-            37.5 grams
-          </div>
-        </div>
-
-        {/* Options */}
-        <div className="space-y-4">
-
-          {/* Buy Gold */}
-          <div className="flex items-center gap-4 bg-[#161616] p-4 rounded-xl hover:bg-[#1e1e1e] transition">
-            <div className="w-10 h-10 flex items-center justify-center bg-black rounded-lg text-yellow-400 text-xl">
-              🪙
+            {/* Badge */}
+            <div className="inline-flex items-center px-4 py-2 rounded-full border border-yellow-500/30 bg-yellow-500/10 text-yellow-400 text-sm">
+              ↗ India's Trusted Digital Gold Platform
             </div>
 
-            <div>
-              <div className="text-white font-medium">
-                Buy Gold
+            {/* Heading */}
+            <h1 className="text-5xl md:text-7xl lg:text-7xl font-extrabold leading-tight tracking-tight">
+              <span className="text-white">Invest in </span>
+
+              <span className="bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-600 bg-clip-text text-transparent">
+                Pure Digital Gold
+              </span>
+
+              <br />
+
+              <span className="text-white">with SabPe</span>
+            </h1>
+
+            {/* Description */}
+            <p className="text-lg text-gray-400 leading-relaxed max-w-lg">
+              Buy, sell, and securely store 24K 99.99% pure gold anytime with
+              SabPe Gold. Start your wealth journey today.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex gap-4 flex-wrap">
+              <button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-8 py-4 rounded-full font-semibold">
+                Start Investing →
+              </button>
+
+              <button className="border border-white/20 text-white px-8 py-4 rounded-full">
+                ▶ Learn More
+              </button>
+            </div>
+
+            {/* Stats */}
+            <div className="flex gap-12 pt-6 flex-wrap">
+              <div>
+                <h3 className="text-3xl font-bold text-yellow-400">5L+</h3>
+                <p className="text-white/50 text-sm">Active Investors</p>
               </div>
 
-              <div className="text-gray-400 text-sm">
-                From ₹10
+              <div>
+                <h3 className="text-3xl font-bold text-yellow-400">₹500Cr+</h3>
+                <p className="text-white/50 text-sm">Gold Traded</p>
+              </div>
+
+              <div>
+                <h3 className="text-3xl font-bold text-yellow-400">4.9★</h3>
+                <p className="text-white/50 text-sm">App Rating</p>
               </div>
             </div>
+
           </div>
 
-          {/* Live Price */}
-          <div className="flex items-center gap-4 bg-[#161616] p-4 rounded-xl hover:bg-[#1e1e1e] transition">
-            <div className="w-10 h-10 flex items-center justify-center bg-black rounded-lg text-yellow-400 text-xl">
-              📈
-            </div>
-
-            <div>
-              <div className="text-white font-medium">
-                Live Price
-              </div>
-
-              <div className="text-gray-400 text-sm">
-                ₹6,554/g
-              </div>
-            </div>
-          </div>
-
-          {/* Insured Vault */}
-          <div className="flex items-center gap-4 bg-[#161616] p-4 rounded-xl hover:bg-[#1e1e1e] transition">
-            <div className="w-10 h-10 flex items-center justify-center bg-black rounded-lg text-yellow-400 text-xl">
-              🛡
-            </div>
-
-            <div>
-              <div className="text-white font-medium">
-                Insured Vault
-              </div>
-
-              <div className="text-gray-400 text-sm">
-                100% Secure
-              </div>
-            </div>
-          </div>
+          {/* Right Dashboard Card */}
+          <DashboardCard />
 
         </div>
-
       </div>
-    </div>
+    </section>
   );
 }
 
-export default DashboardCard;
+export default Hero;
