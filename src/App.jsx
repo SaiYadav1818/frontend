@@ -9,7 +9,7 @@ import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
 import Whysabbpegold from "./components/Whysabbpegold";
-
+import CTA from "./components/CTA";
 function App() {
   return (
     <div className="bg-black text-white">
@@ -49,7 +49,7 @@ function App() {
       <section id="faq">
         <FAQ />
       </section>
-
+<CTA/>
       <section id="contact">
         <Footer />
       </section>
