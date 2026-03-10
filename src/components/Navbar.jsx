@@ -1,4 +1,3 @@
-//Directly into dashboard
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 
@@ -41,6 +40,17 @@ function Navbar() {
     }, 100);
 
     setMenuOpen(false);
+
+  };
+
+  // LOGOUT FUNCTION
+  const handleLogout = () => {
+
+    localStorage.removeItem("isLoggedIn");
+
+    navigate("/");
+
+    window.location.reload();
 
   };
 
@@ -136,12 +146,21 @@ function Navbar() {
             )}
 
             {isLoggedIn && (
-              <Link
-                to="/dashboard"
-                className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold hover:scale-105 transition"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold hover:scale-105 transition"
+                >
+                  Dashboard
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="text-white border border-red-500 px-5 py-2 rounded-full hover:bg-red-500 hover:text-white transition"
+                >
+                  Logout
+                </button>
+              </>
             )}
 
           </div>
@@ -219,13 +238,22 @@ function Navbar() {
             )}
 
             {isLoggedIn && (
-              <Link
-                to="/dashboard"
-                onClick={closeMenu}
-                className="bg-yellow-400 text-black px-6 py-3 rounded-full font-semibold"
-              >
-                Dashboard
-              </Link>
+              <>
+                <Link
+                  to="/dashboard"
+                  onClick={closeMenu}
+                  className="bg-yellow-400 text-black px-6 py-3 rounded-full font-semibold"
+                >
+                  Dashboard
+                </Link>
+
+                <button
+                  onClick={handleLogout}
+                  className="text-white border border-red-500 px-6 py-2 rounded-full"
+                >
+                  Logout
+                </button>
+              </>
             )}
 
           </div>
