@@ -1,3 +1,5 @@
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import TrustSecurity from "./components/TrustSecurity";
@@ -10,7 +12,12 @@ import FAQ from "./components/FAQ";
 import Footer from "./components/Footer";
 import Whysabbpegold from "./components/Whysabbpegold";
 import CTA from "./components/CTA";
-function App() {
+
+import Login from "./pages/Login";
+import Signup from "./pages/SignUp";
+import ForgotPassword from "./pages/ForgotPassword";
+
+function HomePage() {
   return (
     <div className="bg-black text-white">
 
@@ -49,12 +56,34 @@ function App() {
       <section id="faq">
         <FAQ />
       </section>
-<CTA/>
+
+      <CTA />
+
       <section id="contact">
         <Footer />
       </section>
 
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+
+      <Routes>
+
+        <Route path="/" element={<HomePage />} />
+
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/signup" element={<Signup />} />
+
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      </Routes>
+
+    </BrowserRouter>
   );
 }
 
