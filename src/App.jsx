@@ -91,6 +91,7 @@ function App() {
 
         <Route path="/signup" element={<Signup />} /> 
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        
 
       </Routes>
 

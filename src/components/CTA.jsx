@@ -1,7 +1,22 @@
-
 import React from "react";
+import { useNavigate } from "react-router-dom";
 
 function CTA() {
+
+  const navigate = useNavigate();
+
+  const handleInvestClick = () => {
+
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+
+    if (isLoggedIn === "true") {
+      navigate("/dashboard");
+    } else {
+      navigate("/login");
+    }
+
+  };
+
   return (
     <section className="py-32 bg-black">
       <div className="max-w-5xl mx-auto px-4">
@@ -26,7 +41,10 @@ function CTA() {
               Start investing from just ₹10.
             </p>
 
-            <button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-semibold px-10 py-4 rounded-full shadow-[0_0_40px_rgba(234,179,8,0.4)] hover:shadow-[0_0_60px_rgba(234,179,8,0.7)] transition duration-300">
+            <button
+              onClick={handleInvestClick}
+              className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-semibold px-10 py-4 rounded-full shadow-[0_0_40px_rgba(234,179,8,0.4)] hover:shadow-[0_0_60px_rgba(234,179,8,0.7)] transition duration-300"
+            >
               Start Investing Now →
             </button>
 
