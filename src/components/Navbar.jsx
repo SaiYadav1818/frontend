@@ -97,6 +97,13 @@ function Navbar() {
               Home
             </button>
 
+            <Link
+              to="/products"
+              className="text-white/80 hover:text-yellow-400"
+            >
+              Products
+            </Link>
+
             <button
               onClick={() => goToSection("features")}
               className="text-white/80 hover:text-yellow-400"
@@ -188,6 +195,14 @@ function Navbar() {
             >
               Home
             </button>
+
+            <Link
+              to="/products"
+              onClick={closeMenu}
+              className="text-white text-lg"
+            >
+              Products
+            </Link>
 
             <button
               onClick={() => goToSection("features")}

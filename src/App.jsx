@@ -23,6 +23,7 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Terms from "./pages/Terms";
 import RefundPolicy from "./pages/RefundPolicy";
 import Disclaimer from "./pages/Disclaimer";
+import Products from "./pages/Products";
 
 function HomePage() {
   return (
@@ -91,7 +92,8 @@ function App() {
 
         <Route path="/signup" element={<Signup />} /> 
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        
+        <Route path="/products" element={<Products />} />
+
 
       </Routes>
 
