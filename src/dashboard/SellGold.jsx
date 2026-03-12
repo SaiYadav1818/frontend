@@ -29,7 +29,7 @@ function SellGold() {
             </p>
 
             <h2 className="text-4xl font-bold text-yellow-400 mt-1">
-              {goldOwned} g
+              {goldOwned} grams
             </h2>
 
           </div>
@@ -58,7 +58,7 @@ function SellGold() {
               onClick={()=>setGrams(value)}
               className="px-5 py-2 border border-white/10 rounded-lg hover:border-yellow-400 hover:text-yellow-400 transition"
             >
-              {value} g
+              {value} grams
             </button>
           ))}
 

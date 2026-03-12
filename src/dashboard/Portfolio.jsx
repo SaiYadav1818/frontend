@@ -11,7 +11,7 @@ import {
 
 function Portfolio() {
 
-  const totalGold = 37.5;
+  const totalGold = 37.005;
   const investment = 218630;
   const currentValue = 245830;
   const profit = currentValue - investment;
@@ -64,7 +64,7 @@ function Portfolio() {
             </p>
 
             <h3 className="text-3xl font-bold">
-              {totalGold} g
+              {totalGold} grams
             </h3>
 
           </div>

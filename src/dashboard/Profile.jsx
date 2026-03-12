@@ -5,7 +5,7 @@ function Profile() {
   const user = {
     name: "Rahul Sharma",
     email: "rahul@gmail.com",
-    gold: "37.5 g",
+    gold: "37.005 gm",
     portfolio: "₹2,45,830",
     returns: "+12.4%"
   };
@@ -43,7 +43,7 @@ function Profile() {
 
             <div className="flex items-center gap-2 mt-2 text-green-400 text-sm">
               <ShieldCheck size={16}/>
-              KYC Verified
+              Pan Card Verified
             </div>
 
           </div>
@@ -148,9 +148,8 @@ function Profile() {
               Enabled
             </span>
           </div>
-
           <div className="flex justify-between">
-            <span>KYC Verification</span>
+            <span>Pan Card Verification</span>
             <span className="text-green-400">
               Verified
             </span>

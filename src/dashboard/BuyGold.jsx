@@ -92,7 +92,7 @@ function BuyGold() {
 
           <div className="flex justify-between text-sm">
             <span className="text-white/60">Gold Quantity</span>
-            <span>{grams} g</span>
+            <span>{grams} grams</span>
           </div>
 
           <div className="flex justify-between text-sm">
