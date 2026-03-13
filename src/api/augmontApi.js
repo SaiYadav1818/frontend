@@ -85,12 +85,34 @@ export const sellGold = async (payload) => {
 
 /* ---------------- PORTFOLIO ---------------- */
 
-export const getPassbook = async (uniqueId) => {
+// export const getPassbook = async (uniqueId) => {
 
-  const response = await fetch(`${API_BASE}/v1/augmont/users/${uniqueId}/passbook`);
+//   const response = await fetch(`${API_BASE}/v1/augmont/users/${uniqueId}/passbook`);
+
+//   const data = await response.json();
+
+//   return data.payload.result.data;
+
+// };
+export const getPortfolio = async (uniqueId) => {
+
+  const response = await fetch(`http://localhost:8080/v1/augmont/users/${uniqueId}/passbook`);
 
   const data = await response.json();
 
-  return data.payload.result.data;
+  return data;
+
+};
+export const getBuyTransactions = async (uniqueId) => {
+
+  const res = await fetch(`http://localhost:8080/v1/augmont/buy/users/${uniqueId}`);
+  return await res.json();
+
+};
+
+export const getSellTransactions = async (uniqueId) => {
+
+  const res = await fetch(`http://localhost:8080/v1/augmont/sell/users/${uniqueId}`);
+  return await res.json();
 
 };
