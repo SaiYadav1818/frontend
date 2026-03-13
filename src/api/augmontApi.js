@@ -1,119 +1,74 @@
-import API_BASE from "./config";
+const BASE_URL = "http://localhost:8080";
 
-/* ---------------- GET GOLD RATES ---------------- */
+/* GOLD RATES */
 
 export const getGoldRates = async () => {
 
-  const response = await fetch(`${API_BASE}/v1/augmont/rates`);
-
-  const data = await response.json();
-
-  console.log("Rates API Response:", data);
-
-  return data.payload.result.data;
+  const res = await fetch(`${BASE_URL}/v1/augmont/rates`);
+  return await res.json();
 
 };
 
+/* PORTFOLIO */
 
-/* ---------------- GET PRODUCTS ---------------- */
+export const getPortfolio = async (uniqueId) => {
 
-export const getProducts = async () => {
-
-  const response = await fetch(`${API_BASE}/v1/augmont/products`);
-
-  const data = await response.json();
-
-  return data.payload.result.data;
+  const res = await fetch(`${BASE_URL}/v1/augmont/users/${uniqueId}/passbook`);
+  return await res.json();
 
 };
 
-
-/* ---------------- CREATE USER (SIGNUP) ---------------- */
-
-export const createUser = async (userData) => {
-
-  const response = await fetch(`${API_BASE}/v1/augmont/users`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(userData)
-  });
-
-  return response.json();
-
-};
-
-
-/* ---------------- BUY GOLD ---------------- */
+/* BUY GOLD */
 
 export const buyGold = async (payload) => {
 
-  const response = await fetch(`${API_BASE}/v1/augmont/buy`, {
+  const res = await fetch(`${BASE_URL}/v1/augmont/buy`, {
+
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
+
   });
 
-  return response.json();
+  return await res.json();
 
 };
 
-
-/* ---------------- SELL GOLD ---------------- */
+/* SELL GOLD */
 
 export const sellGold = async (payload) => {
 
-  const response = await fetch(`${API_BASE}/v1/augmont/sell`, {
+  const res = await fetch(`${BASE_URL}/v1/augmont/sell`, {
+
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
     body: JSON.stringify(payload)
+
   });
 
-  return response.json();
+  return await res.json();
 
 };
 
+/* TRANSACTIONS */
 
-/* ---------------- PORTFOLIO ---------------- */
-
-// export const getPassbook = async (uniqueId) => {
-
-//   const response = await fetch(`${API_BASE}/v1/augmont/users/${uniqueId}/passbook`);
-
-//   const data = await response.json();
-
-//   return data.payload.result.data;
-
-// };
-export const getPortfolio = async (uniqueId) => {
-
-  const response = await fetch(`http://localhost:8080/v1/augmont/users/${uniqueId}/passbook`);
-
-  const data = await response.json();
-
-  return data;
-
-};
 export const getBuyTransactions = async (uniqueId) => {
 
-  const res = await fetch(`http://localhost:8080/v1/augmont/buy/users/${uniqueId}`);
+  const res = await fetch(`${BASE_URL}/v1/augmont/buy/users/${uniqueId}`);
   return await res.json();
 
 };
 
 export const getSellTransactions = async (uniqueId) => {
 
-  const res = await fetch(`http://localhost:8080/v1/augmont/sell/users/${uniqueId}`);
+  const res = await fetch(`${BASE_URL}/v1/augmont/sell/users/${uniqueId}`);
   return await res.json();
 
 };
-
-
 /* ---------------- LOGIN ---------------- */
 
 export const loginUser = async (email, password) => {
@@ -132,5 +87,18 @@ export const loginUser = async (email, password) => {
   const data = await response.json();
 
   return data;
+
+};
+export const createUser = async (userData) => {
+
+  const response = await fetch(`${API_BASE}/v1/augmont/users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(userData)
+  });
+
+  return response.json();
 
 };
