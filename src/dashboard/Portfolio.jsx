@@ -249,3 +249,50 @@ function Portfolio() {
 }
 
 export default Portfolio;
+// /=====================================
+// //protflio backend 
+// import { useEffect,useState } from "react";
+
+// function Portfolio(){
+
+//   const [portfolio,setPortfolio] = useState(null);
+
+//   useEffect(()=>{
+
+//     fetch("http://localhost:8080/api/portfolio")
+
+//       .then(res=>res.json())
+
+//       .then(data=>setPortfolio(data));
+
+//   },[]);
+
+//   if(!portfolio){
+
+//     return <p>Loading portfolio...</p>
+
+//   }
+
+//   return(
+
+//     <div className="space-y-6">
+
+//       <h2 className="text-2xl font-bold">Your Portfolio</h2>
+
+//       <div className="bg-[#111] p-6 rounded-xl">
+
+//         <p>Gold Owned: {portfolio.goldOwned} g</p>
+
+//         <p>Portfolio Value: ₹{portfolio.value}</p>
+
+//         <p>Returns: ₹{portfolio.returns}</p>
+
+//       </div>
+
+//     </div>
+
+//   )
+
+// }
+
+// export default Portfolio;

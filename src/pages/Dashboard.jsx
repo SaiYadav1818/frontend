@@ -1,6 +1,6 @@
-//Directly into dashboard
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import ProductList from "../dashboard/ProductList";
 import DashboardNavbar from "../components/DashboardNavbar";
 import BuyGold from "../dashboard/BuyGold";
 import SellGold from "../dashboard/SellGold";
@@ -9,53 +9,62 @@ import Profile from "../dashboard/Profile";
 
 function Dashboard() {
 
-  const [activeTab,setActiveTab] = useState("profile");
-
   const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(()=>{
+  const params = new URLSearchParams(location.search);
+  const tabFromURL = params.get("tab") || "profile";
+
+  const [activeTab, setActiveTab] = useState(tabFromURL);
+
+  useEffect(() => {
 
     const logged = localStorage.getItem("isLoggedIn");
 
-    if(!logged){
+    if (!logged) {
       navigate("/login");
     }
 
-  },[]);
+  }, []);
 
   const renderContent = () => {
 
-    switch(activeTab){
+    switch (activeTab) {
 
       case "profile":
-        return <Profile/>
+        return <Profile />;
 
       case "portfolio":
-        return <Portfolio/>
+        return <Portfolio />;
 
       case "buy":
-        return <BuyGold/>
+        return <BuyGold />;
 
       case "sell":
-        return <SellGold/>
+        return <SellGold />;
 
       default:
-        return null
+        return null;
 
     }
 
   };
+return (
 
-  return (
+  <div className="bg-black min-h-screen text-white">
 
-    <div className="bg-black min-h-screen text-white">
+    <DashboardNavbar
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+    />
 
-      <DashboardNavbar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+    <div className="flex">
 
-      <div className="max-w-6xl mx-auto p-10">
+      {/* LEFT PRODUCTS */}
+      <ProductList setActiveTab={setActiveTab}/>
+
+      {/* RIGHT CONTENT */}
+      <div className="flex-1 p-10">
 
         {renderContent()}
 
@@ -63,8 +72,11 @@ function Dashboard() {
 
     </div>
 
-  );
+  </div>
+
+);
 
 }
+
 
 export default Dashboard;

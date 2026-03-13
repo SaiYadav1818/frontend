@@ -7,33 +7,11 @@ import Footer from "../components/Footer";
 
 /* ---------------- DATA ---------------- */
 
-const liveGold = {
-  purity: "24K",
-  price: "₹6,520",
-  unit: "gram",
-  updated: "Just now"
-};
-
-const products = Array.from({ length: 21 }, (_, i) => ({
+const products = Array.from({ length: 15 }, (_, i) => ({
   id: i + 1,
   name: `Digital Gold Plan ${i + 1}`,
   price: "Live Price"
 }));
-
-const features = [
-  {
-    title: "24K 999.9 Purity",
-    desc: "All gold investments are backed by high purity physical gold."
-  },
-  {
-    title: "Secure Storage",
-    desc: "Gold is stored in insured and professionally managed vaults."
-  },
-  {
-    title: "Instant Liquidity",
-    desc: "Buy and sell gold anytime at live market prices."
-  }
-];
 
 /* ---------------- COMPONENT ---------------- */
 
@@ -46,7 +24,7 @@ export default function Products() {
     const isLoggedIn = localStorage.getItem("isLoggedIn");
 
     if (isLoggedIn === "true") {
-      navigate("/dashboard");
+      navigate("/dashboard?tab=buy");
     } else {
       navigate("/login");
     }
@@ -54,20 +32,13 @@ export default function Products() {
   };
 
   return (
+
     <div className="bg-black text-white">
 
-      {/* NAVBAR */}
       <Navbar />
 
-      {/* MAIN CONTENT */}
       <main className="pt-20">
 
-        {/* LIVE PRICE BAR */}
-        <div className="bg-yellow-500 text-black py-3 text-center font-semibold">
-          {liveGold.purity} Gold Price: {liveGold.price} / {liveGold.unit} • Updated {liveGold.updated}
-        </div>
-
-        {/* PRODUCTS SECTION */}
         <section className="py-28 px-6 lg:px-20 relative overflow-hidden">
 
           <div className="absolute top-20 left-1/2 -translate-x-1/2 w-[700px] h-[700px] bg-yellow-500 opacity-10 blur-[200px] rounded-full"></div>
@@ -86,7 +57,6 @@ export default function Products() {
               Secure and flexible digital gold investment options
             </p>
 
-            {/* PRODUCT GRID */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
 
               {products.map((product, index) => (
@@ -126,35 +96,6 @@ export default function Products() {
           </div>
         </section>
 
-        {/* FEATURES */}
-        <section className="py-24 px-6 lg:px-20 bg-[#0b0b0b]">
-
-          <div className="max-w-6xl mx-auto text-center">
-
-            <h2 className="text-4xl font-bold mb-12">
-              Why Invest in <span className="text-yellow-400">Digital Gold</span>
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-10">
-
-              {features.map((feature, i) => (
-                <div key={i}>
-                  <h3 className="text-xl font-semibold mb-2">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-400">
-                    {feature.desc}
-                  </p>
-                </div>
-              ))}
-
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* CTA */}
         <section className="py-28 px-6 text-center">
 
           <h2 className="text-4xl font-bold mb-6">
@@ -176,9 +117,104 @@ export default function Products() {
 
       </main>
 
-      {/* FOOTER */}
       <Footer />
 
     </div>
   );
 }
+
+//Backend code integration code 
+// import { motion } from "framer-motion";
+// import { Coins } from "lucide-react";
+// import { useNavigate } from "react-router-dom";
+// import { useEffect, useState } from "react";
+
+// import Navbar from "../components/Navbar";
+// import Footer from "../components/Footer";
+
+// export default function Products() {
+
+//   const navigate = useNavigate();
+
+//   const [products,setProducts] = useState([]);
+
+//   useEffect(()=>{
+
+//     fetch("http://localhost:8080/api/products")
+//       .then(res=>res.json())
+//       .then(data=>setProducts(data))
+//       .catch(err=>console.log(err));
+
+//   },[]);
+
+//   const handleInvestClick = () => {
+
+//     const isLoggedIn = localStorage.getItem("isLoggedIn");
+
+//     if (isLoggedIn === "true") {
+//       navigate("/dashboard?tab=buy");
+//     } else {
+//       navigate("/login");
+//     }
+
+//   };
+
+//   return (
+
+//     <div className="bg-black text-white">
+
+//       <Navbar/>
+
+//       <main className="pt-20">
+
+//         <section className="py-28 px-6 lg:px-20">
+
+//           <div className="max-w-7xl mx-auto">
+
+//             <h2 className="text-center text-4xl font-bold mb-12">
+//               Gold Products
+//             </h2>
+
+//             <div className="grid md:grid-cols-3 lg:grid-cols-4 gap-8">
+
+//               {products.map((product)=>(
+                
+//                 <div
+//                   key={product.id}
+//                   className="bg-[#111] border border-white/10 rounded-2xl p-8 text-center"
+//                 >
+
+//                   <Coins className="text-yellow-400 mx-auto mb-4"/>
+
+//                   <h3 className="text-lg font-semibold">
+//                     {product.name}
+//                   </h3>
+
+//                   <p className="text-yellow-400 mb-4">
+//                     ₹{product.price}
+//                   </p>
+
+//                   <button
+//                     onClick={handleInvestClick}
+//                     className="bg-yellow-400 text-black px-6 py-2 rounded-xl"
+//                   >
+//                     Invest Now
+//                   </button>
+
+//                 </div>
+
+//               ))}
+
+//             </div>
+
+//           </div>
+
+//         </section>
+
+//       </main>
+
+//       <Footer/>
+
+//     </div>
+//   );
+// }
