@@ -1,13 +1,16 @@
 
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import Portfolio from "./dashboard/Portfolio";
+import Profile from "./dashboard/Profile";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import TrustSecurity from "./components/TrustSecurity";
 import HowItWorks from "./components/HowItWorks";
 import Features from "./components/Features";
+import DashboardPreview from "./components/DashboardPreview";
 import GoldPriceWidget from "./components/GoldPriceWidget";
 import MobileApp from "./components/MobileApp";
 import Testimonials from "./components/Testimonials";
@@ -33,6 +36,10 @@ function HomePage() {
 
       <section id="home">
         <Hero />
+      </section>
+
+      <section id="your-dashboard">
+        <DashboardPreview />
       </section>
 
       <TrustSecurity />
@@ -78,7 +85,11 @@ function App() {
     <Router>
 <ScrollToSection />
       <Routes>
-<Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/*" element={<Dashboard />}> 
+          <Route index element={<Portfolio />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
         <Route path="/" element={<HomePage />} />
 
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

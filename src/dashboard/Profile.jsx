@@ -1,283 +1,104 @@
-// import { ShieldCheck, Wallet, Mail, TrendingUp } from "lucide-react";
-
-// function Profile() {
-
-//   const user = {
-//     name: "Rahul Sharma",
-//     email: "rahul@gmail.com",
-//     gold: "37.005 gm",
-//     portfolio: "₹2,45,830",
-//     returns: "+12.4%"
-//   };
-
-//   return (
-
-//     <div className="space-y-10 max-w-6xl mx-auto">
-
-//       {/* HERO PROFILE CARD */}
-
-//       <div className="relative bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-yellow-500/20 rounded-3xl p-10 flex items-center justify-between overflow-hidden">
-
-//         {/* gold glow */}
-//         <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-yellow-500/20 blur-[120px] rounded-full"></div>
-
-//         <div className="flex items-center gap-6">
-
-//           {/* avatar */}
-
-//           <div className="w-20 h-20 rounded-full bg-yellow-400 text-black flex items-center justify-center text-3xl font-bold">
-//             {user.name.charAt(0)}
-//           </div>
-
-//           {/* info */}
-
-//           <div>
-
-//             <h2 className="text-2xl font-bold">
-//               {user.name}
-//             </h2>
-
-//             <p className="text-white/60">
-//               {user.email}
-//             </p>
-
-//             <div className="flex items-center gap-2 mt-2 text-green-400 text-sm">
-//               <ShieldCheck size={16}/>
-//               Pan Card Verified
-//             </div>
-
-//           </div>
-
-//         </div>
-
-//         {/* portfolio highlight */}
-
-//         <div className="text-right">
-
-//           <p className="text-white/60 text-sm">
-//             Portfolio Value
-//           </p>
-
-//           <h3 className="text-3xl font-bold text-yellow-400">
-//             {user.portfolio}
-//           </h3>
-
-//           <p className="text-green-400 text-sm flex items-center justify-end gap-1">
-//             <TrendingUp size={14}/>
-//             {user.returns}
-//           </p>
-
-//         </div>
-
-//       </div>
-
-//       {/* ACCOUNT STATS */}
-
-//       <div className="grid md:grid-cols-3 gap-6">
-
-//         <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
-
-//           <Wallet className="text-yellow-400"/>
-
-//           <div>
-//             <p className="text-white/60 text-sm">
-//               Gold Balance
-//             </p>
-
-//             <p className="text-xl font-semibold">
-//               {user.gold}
-//             </p>
-//           </div>
-
-//         </div>
-
-//         <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
-
-//           <Mail className="text-yellow-400"/>
-
-//           <div>
-//             <p className="text-white/60 text-sm">
-//               Email Address
-//             </p>
-
-//             <p className="text-xl font-semibold">
-//               {user.email}
-//             </p>
-//           </div>
-
-//         </div>
-
-//         <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
-
-//           <ShieldCheck className="text-yellow-400"/>
-
-//           <div>
-//             <p className="text-white/60 text-sm">
-//               Account Security
-//             </p>
-
-//             <p className="text-xl font-semibold text-green-400">
-//               Secure
-//             </p>
-//           </div>
-
-//         </div>
-
-//       </div>
-
-//       {/* SECURITY PANEL */}
-
-//       <div className="bg-[#111] border border-white/10 rounded-2xl p-8">
-
-//         <h3 className="text-xl font-semibold mb-6">
-//           Security Settings
-//         </h3>
-
-//         <div className="space-y-5 text-sm">
-
-//           <div className="flex justify-between border-b border-white/10 pb-3">
-//             <span>Password</span>
-//             <span className="text-white/60">
-//               Last updated 30 days ago
-//             </span>
-//           </div>
-
-//           <div className="flex justify-between border-b border-white/10 pb-3">
-//             <span>Two Factor Authentication</span>
-//             <span className="text-yellow-400">
-//               Enabled
-//             </span>
-//           </div>
-//           <div className="flex justify-between">
-//             <span>Pan Card Verification</span>
-//             <span className="text-green-400">
-//               Verified
-//             </span>
-//           </div>
-
-//         </div>
-
-//       </div>
-
-//       {/* ACTION BUTTON */}
-
-//       <button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-semibold px-10 py-4 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.5)] hover:scale-105 transition">
-
-//         Edit Profile
-
-//       </button>
-
-//     </div>
-
-//   );
-// }
-
-// export default Profile;
-import { useState, useEffect } from "react";
-import { Coins } from "lucide-react";
-import {
-  getPortfolio,
-  getGoldRates,
-  getBuyTransactions,
-  getSellTransactions
-} from "../api/augmontApi";
-
-function Portfolio(){
-
-const [gold,setGold]=useState(0)
-const [value,setValue]=useState(0)
-const [tx,setTx]=useState([])
-
-useEffect(()=>{
-
-const load=async()=>{
-
-const uniqueId=localStorage.getItem("uniqueId")
-
-const portfolio=await getPortfolio(uniqueId)
-
-const grams=parseFloat(
-portfolio?.payload?.result?.data?.goldGrms||0
-)
-
-setGold(grams)
-
-const rates=await getGoldRates()
-
-const price=parseFloat(
-rates?.payload?.result?.data?.rates?.gBuy||0
-)
-
-setValue(grams*price)
-
-const buys=await getBuyTransactions(uniqueId)
-const sells=await getSellTransactions(uniqueId)
-
-const b=buys?.payload?.result?.data||[]
-const s=sells?.payload?.result?.data||[]
-
-const all=[...b,...s]
-
-setTx(all.slice(0,5))
-
+import { useEffect, useState } from "react";
+import { ShieldCheck, Wallet, Mail, TrendingUp } from "lucide-react";
+
+export default function Profile() {
+  const [user, setUser] = useState({
+    name: "Rahul Sharma",
+    email: "rahul@gmail.com",
+    gold: "37.005 gm",
+    portfolio: "₹2,45,830",
+    returns: "+12.4%",
+  });
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("user");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        setUser((prev) => ({ ...prev, ...parsed }));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  return (
+    <div className="space-y-10 max-w-6xl mx-auto">
+      {/* PROFILE HERO */}
+      <div className="relative bg-gradient-to-br from-[#111] to-[#0b0b0b] border border-yellow-500/20 rounded-3xl p-10 flex flex-col lg:flex-row items-start lg:items-center justify-between overflow-hidden">
+        <div className="absolute -top-20 -right-20 w-[300px] h-[300px] bg-yellow-500/20 blur-[120px] rounded-full" />
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 rounded-full bg-yellow-400 text-black flex items-center justify-center text-3xl font-bold">
+            {user.name.charAt(0)}
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold">{user.name}</h2>
+            <p className="text-white/60">{user.email}</p>
+            <div className="flex items-center gap-2 mt-2 text-green-400 text-sm">
+              <ShieldCheck size={16} />
+              Pan Card Verified
+            </div>
+          </div>
+        </div>
+
+        <div className="text-right mt-8 lg:mt-0">
+          <p className="text-white/60 text-sm">Portfolio Value</p>
+          <h3 className="text-3xl font-bold text-yellow-400">{user.portfolio}</h3>
+          <p className="text-green-400 text-sm flex items-center justify-end gap-1">
+            <TrendingUp size={14} /> {user.returns}
+          </p>
+        </div>
+      </div>
+
+      {/* ACCOUNT STATS */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
+          <Wallet className="text-yellow-400" />
+          <div>
+            <p className="text-white/60 text-sm">Gold Balance</p>
+            <p className="text-xl font-semibold">{user.gold}</p>
+          </div>
+        </div>
+
+        <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
+          <Mail className="text-yellow-400" />
+          <div>
+            <p className="text-white/60 text-sm">Email Address</p>
+            <p className="text-xl font-semibold">{user.email}</p>
+          </div>
+        </div>
+
+        <div className="bg-[#111] border border-white/10 rounded-xl p-6 flex items-center gap-4">
+          <ShieldCheck className="text-yellow-400" />
+          <div>
+            <p className="text-white/60 text-sm">Account Security</p>
+            <p className="text-xl font-semibold text-green-400">Secure</p>
+          </div>
+        </div>
+      </div>
+
+      {/* SECURITY PANEL */}
+      <div className="bg-[#111] border border-white/10 rounded-2xl p-8">
+        <h3 className="text-xl font-semibold mb-6">Security Settings</h3>
+        <div className="space-y-5 text-sm">
+          <div className="flex justify-between border-b border-white/10 pb-3">
+            <span>Password</span>
+            <span className="text-white/60">Last updated 30 days ago</span>
+          </div>
+          <div className="flex justify-between border-b border-white/10 pb-3">
+            <span>Two Factor Authentication</span>
+            <span className="text-yellow-400">Enabled</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Pan Card Verification</span>
+            <span className="text-green-400">Verified</span>
+          </div>
+        </div>
+      </div>
+
+      <button className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-semibold px-10 py-4 rounded-full shadow-[0_0_30px_rgba(234,179,8,0.5)] hover:scale-105 transition">
+        Edit Profile
+      </button>
+    </div>
+  );
 }
-
-load()
-
-},[])
-
-return(
-
-<div className="space-y-10 max-w-6xl mx-auto">
-
-<div className="bg-[#111] border border-white/10 rounded-3xl p-10">
-
-<p className="text-white/60 text-sm">
-Total Gold
-</p>
-
-<h2 className="text-4xl text-yellow-400 font-bold">
-{gold.toFixed(3)} grams
-</h2>
-
-<p className="text-green-400 mt-2">
-Portfolio Value ₹{value.toLocaleString()}
-</p>
-
-</div>
-
-<div className="bg-[#111] border border-white/10 rounded-2xl p-8">
-
-<h3 className="text-xl font-semibold mb-6">
-Recent Transactions
-</h3>
-
-<div className="space-y-3">
-
-{tx.length===0?
-<p className="text-white/50">No transactions</p>
-:
-
-tx.map((t,i)=>(
-<div key={i} className="flex justify-between border-b border-white/10 pb-2">
-
-<span>{t.metalType||"Gold"}</span>
-
-<span>₹{Number(t.amount||0).toLocaleString()}</span>
-
-</div>
-))
-
-}
-
-</div>
-
-</div>
-
-</div>
-
-)
-
-}
-
-export default Portfolio
