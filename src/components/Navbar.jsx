@@ -4,6 +4,7 @@ import { useNavigate, Link } from "react-router-dom";
 function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -18,6 +19,14 @@ function Navbar() {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // ✅ Close dropdown on outside click
+  useEffect(() => {
+    const closeDropdown = () => setProfileOpen(false);
+
+    document.addEventListener("click", closeDropdown);
+    return () => document.removeEventListener("click", closeDropdown);
   }, []);
 
   const handleLogout = () => {
@@ -60,8 +69,8 @@ function Navbar() {
             </Link>
 
             <Link to="/mobile" className="text-white/80 hover:text-yellow-400">
-  Mobile App
-</Link>
+              Mobile App
+            </Link>
 
             <Link to="/features" className="text-white/80 hover:text-yellow-400">
               Features
@@ -97,30 +106,90 @@ function Navbar() {
                 </Link>
               </>
             ) : (
-              <div className="relative group">
+              <div className="flex items-center gap-4">
 
-                {/* Profile Icon */}
-                <div className="w-10 h-10 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full cursor-pointer">
-                  {userInitial}
-                </div>
+                {/* Dashboard Button */}
+                <Link
+                  to="/dashboard"
+                  className="bg-yellow-400 text-black px-6 py-2 rounded-full font-semibold hover:scale-105 transition"
+                >
+                  Dashboard
+                </Link>
 
-                {/* Dropdown */}
-                <div className="absolute right-0 mt-3 w-48 bg-black border border-white/10 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-200">
-                  
-                  <Link
-                    to="/dashboard"
-                    className="block px-4 py-3 text-white hover:bg-white/10"
-                  >
-                    Dashboard
-                  </Link>
-
+                {/* Profile Dropdown */}
+                <div className="relative">
                   <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-3 text-red-400 hover:bg-white/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setProfileOpen(!profileOpen);
+                    }}
+                    className="w-10 h-10 bg-yellow-400 text-black font-bold flex items-center justify-center rounded-full"
                   >
-                    Logout
+                    {userInitial}
                   </button>
 
+                  {profileOpen && (
+                    <div className="absolute right-0 mt-3 w-56 bg-black border border-white/10 rounded-xl shadow-lg py-2 z-50">
+
+                      {/* USER INFO */}
+                      <div className="px-4 py-3 border-b border-white/10">
+                        <p className="text-white font-semibold">Rahul</p>
+                        <p className="text-white/60 text-sm">rahul@email.com</p>
+                      </div>
+
+                      {/* OPTIONS */}
+                      <button
+                        onClick={() => {
+                          navigate("/profile");
+                          setProfileOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                      >
+                        My Profile
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/orders");
+                          setProfileOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                      >
+                        My Orders
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/settings");
+                          setProfileOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                      >
+                        Settings
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          navigate("/help");
+                          setProfileOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2 text-white hover:bg-white/10"
+                      >
+                        Help & Support
+                      </button>
+
+                      {/* LOGOUT */}
+                      <div className="border-t border-white/10 mt-2">
+                        <button
+                          onClick={handleLogout}
+                          className="w-full text-left px-4 py-2 text-red-400 hover:bg-white/10"
+                        >
+                          Logout
+                        </button>
+                      </div>
+
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -144,11 +213,13 @@ function Navbar() {
             </Link>
 
             <Link to="/products" onClick={() => setMenuOpen(false)} className="text-white text-lg">
-              Products 
+              Products
             </Link>
+
             <Link to="/mobile" onClick={() => setMenuOpen(false)} className="text-white text-lg">
               Mobile App
             </Link>
+
             <Link to="/features" onClick={() => setMenuOpen(false)} className="text-white text-lg">
               Features
             </Link>

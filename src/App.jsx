@@ -6,6 +6,10 @@ import {
   Routes,
   Route,
 } from "react-router-dom";
+import ProfilePage from "./pages/ProfilePage";
+import OrdersPage from "./pages/OrdersPage";
+import SettingsPage from "./pages/SettingsPage";
+import HelpPage from "./pages/HelpPage";
 
 // DASHBOARD
 import Dashboard from "./pages/Dashboard";
@@ -92,6 +96,10 @@ function App() {
       <ScrollToSection />
 
       <Routes>
+        <Route path="/profile" element={<ProfilePage />} />
+<Route path="/orders" element={<OrdersPage />} />
+<Route path="/settings" element={<SettingsPage />} />
+<Route path="/help" element={<HelpPage />} />
 
         {/* DASHBOARD */}
         <Route path="/dashboard/*" element={<Dashboard />}>
