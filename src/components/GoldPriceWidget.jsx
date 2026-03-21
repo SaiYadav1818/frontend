@@ -98,13 +98,11 @@ function GoldPriceWidget() {
       title: "Buy Price",
       price: formatCurrency(liveRates.buyPrice || currentPrice),
       sub: "/gram",
-      extra: "Live from backend"
     },
     {
       title: "Sell Price",
       price: formatCurrency(liveRates.sellPrice || currentPrice),
       sub: "/gram",
-      extra: "Live from backend"
     }
   ];
   return (

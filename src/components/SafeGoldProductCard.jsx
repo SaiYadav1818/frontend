@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Coins, PackageCheck } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -8,6 +9,7 @@ const formatPrice = (price) =>
   });
 
 function SafeGoldProductCard({ product, onClick }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   return (
     <motion.button
       type="button"
@@ -48,49 +50,64 @@ function SafeGoldProductCard({ product, onClick }) {
           Rs. {formatPrice(product?.price)}
         </p>
 
-        <div className="mb-4 grid grid-cols-2 gap-2 text-sm text-gray-300">
-          <p>Weight: {product?.weight ?? "NA"}g</p>
-          <p>Metal: {product?.metal || "NA"}</p>
-          <p>Stamp: {product?.purity || "NA"}</p>
-          <p>Brand: {product?.brand || "NA"}</p>
-          <p>Dispatch: {product?.dispatchTime || "NA"}</p>
-          <p>SKU: {product?.skuNumber || "NA"}</p>
-        </div>
-
-        {product?.highlights?.length > 0 && (
-          <div className="mb-4">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-yellow-400">
-              Highlights
-            </p>
-            <div className="space-y-1 text-sm text-gray-400">
-              {product.highlights.slice(0, 3).map((highlight) => (
-                <p key={highlight} className="line-clamp-1">
-                  {highlight}
-                </p>
-              ))}
+        {isExpanded && (
+          <>
+            <div className="mb-4 grid grid-cols-2 gap-2 text-sm text-gray-300">
+              <p>Weight: {product?.weight ?? "NA"}g</p>
+              <p>Metal: {product?.metal || "NA"}</p>
+              <p>Stamp: {product?.purity || "NA"}</p>
+              <p>Brand: {product?.brand || "NA"}</p>
+              <p>Dispatch: {product?.dispatchTime || "NA"}</p>
+              <p>SKU: {product?.skuNumber || "NA"}</p>
             </div>
-          </div>
+
+            {product?.highlights?.length > 0 && (
+              <div className="mb-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-yellow-400">
+                  Highlights
+                </p>
+                <div className="space-y-1 text-sm text-gray-400">
+                  {product.highlights.slice(0, 3).map((highlight) => (
+                    <p key={highlight} className="line-clamp-1">
+                      {highlight}
+                    </p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 text-sm text-gray-400">
+              {product?.certification && (
+                <p>Certification: {product.certification}</p>
+              )}
+              {product?.packaging && <p>Packaging: {product.packaging}</p>}
+              {product?.dimensions && <p>Dimensions: {product.dimensions}</p>}
+              {product?.thickness && <p>Thickness: {product.thickness}</p>}
+              {product?.refundPolicy && (
+                <div className="rounded-xl border border-white/10 bg-black/20 p-3">
+                  <div className="mb-1 flex items-center gap-2 text-yellow-400">
+                    <PackageCheck size={14} />
+                    <span className="text-xs font-semibold uppercase tracking-wide">
+                      Refund Policy
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">{product.refundPolicy}</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
 
-        <div className="space-y-2 text-sm text-gray-400">
-          {product?.certification && (
-            <p>Certification: {product.certification}</p>
-          )}
-          {product?.packaging && <p>Packaging: {product.packaging}</p>}
-          {product?.dimensions && <p>Dimensions: {product.dimensions}</p>}
-          {product?.thickness && <p>Thickness: {product.thickness}</p>}
-          {product?.refundPolicy && (
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3">
-              <div className="mb-1 flex items-center gap-2 text-yellow-400">
-                <PackageCheck size={14} />
-                <span className="text-xs font-semibold uppercase tracking-wide">
-                  Refund Policy
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">{product.refundPolicy}</p>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          className="mt-4 flex items-center justify-end gap-3 text-sm text-gray-400 w-full hover:text-yellow-400 transition"
+        >
+          <span>{isExpanded ? "Show Less" : "View Details"}</span>
+        </button>
       </div>
     </motion.button>
   );

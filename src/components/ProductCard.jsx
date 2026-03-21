@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Coins } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -8,6 +9,7 @@ const formatPrice = (price) =>
   });
 
 function ProductCard({ product, onClick }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const isActive = String(product?.status || "").toLowerCase() === "active";
 
   return (
@@ -50,26 +52,39 @@ function ProductCard({ product, onClick }) {
           Rs. {formatPrice(product?.basePrice)}
         </p>
 
-        <div className="mb-4 grid grid-cols-2 gap-2 text-sm text-gray-300">
-          <p>Metal: {product?.metalType || "NA"}</p>
-          <p>Purity: {product?.purity || "NA"}</p>
-          <p>Weight: {product?.productWeight || "NA"}g</p>
-          <p>Redeem: {product?.redeemWeight || "NA"}g</p>
-        </div>
-
-        {product?.description ? (
-          <p className="mb-4 line-clamp-4 text-sm text-gray-400">
-            {product.description}
-          </p>
-        ) : (
-          <p className="mb-4 text-sm text-gray-500">
-            Product description is not available.
-          </p>
+        {isExpanded && (
+          <div className="mb-4 grid grid-cols-2 gap-2 text-sm text-gray-300">
+            <p>Metal: {product?.metalType || "NA"}</p>
+            <p>Purity: {product?.purity || "NA"}</p>
+            <p>Weight: {product?.productWeight || "NA"}g</p>
+            <p>Redeem: {product?.redeemWeight || "NA"}g</p>
+          </div>
         )}
 
-        <div className="flex items-center justify-end gap-3 text-sm text-gray-400">
-          <span>View Details</span>
-        </div>
+        {isExpanded && (
+          <>
+            {product?.description ? (
+              <p className="mb-4 text-sm text-gray-400">
+                {product.description}
+              </p>
+            ) : (
+              <p className="mb-4 text-sm text-gray-500">
+                Product description is not available.
+              </p>
+            )}
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsExpanded(!isExpanded);
+          }}
+          className="flex items-center justify-end gap-3 text-sm text-gray-400 w-full hover:text-yellow-400 transition"
+        >
+          <span>{isExpanded ? "Show Less" : "View Details"}</span>
+        </button>
       </div>
     </motion.button>
   );

@@ -2,14 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom"; // ✅ FIX
 import BuyGold from "./BuyGold";
 import SellGold from "./SellGold";
+import GoldPriceChart from "../components/GoldPriceChart";
 import { getGoldRates } from "../api/augmontApi";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 
 export default function Portfolio() {
   const navigate = useNavigate(); // ✅ FIX
@@ -54,17 +48,6 @@ export default function Portfolio() {
     if (!invested) return 0;
     return ((profit / invested) * 100).toFixed(2);
   }, [profit, invested]);
-
-  // 🔥 CHART DATA
-  const chartData = [
-    { day: "Mon", price: 65000 },
-    { day: "Tue", price: 67000 },
-    { day: "Wed", price: 66000 },
-    { day: "Thu", price: 69000 },
-    { day: "Fri", price: 71000 },
-    { day: "Sat", price: 72000 },
-    { day: "Sun", price: 74000 },
-  ];
 
   return (
     <div className="bg-black text-white min-h-screen">
@@ -151,56 +134,7 @@ export default function Portfolio() {
 
         {/* 🔥 CONTENT */}
         {activeTab === "overview" && (
-          <div className="bg-[#111] p-5 rounded-2xl">
-
-            <div className="flex justify-between mb-4">
-              <h3 className="text-sm text-white/60">
-                Portfolio Trend
-              </h3>
-              <span className="text-xs text-white/40">Last 7 days</span>
-            </div>
-
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData}>
-
-                  <XAxis
-                    dataKey="day"
-                    stroke="#666"
-                    axisLine={false}
-                    tickLine={false}
-                    interval={0}
-                    tick={{ fontSize: 12 }}
-                  />
-
-                  <Tooltip
-                    contentStyle={{
-                      background: "#111",
-                      border: "1px solid rgba(255,255,255,0.1)",
-                      borderRadius: "10px",
-                    }}
-                    labelStyle={{ color: "#fff" }}
-                  />
-
-                  <Area
-                    type="monotone"
-                    dataKey="price"
-                    stroke="#FBBF24"
-                    strokeWidth={2}
-                    fill="url(#goldGradient)"
-                  />
-
-                  <defs>
-                    <linearGradient id="goldGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FBBF24" stopOpacity={0.5} />
-                      <stop offset="100%" stopColor="#FBBF24" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <GoldPriceChart />
         )}
 
         {activeTab === "buy" && <BuyGold />}
