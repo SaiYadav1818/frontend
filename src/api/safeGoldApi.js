@@ -323,11 +323,22 @@ export const fetchSafeGoldSellPrice = async () => {
     const data = await getJson(res);
     const price = extractRateValue(data, ["sellPrice"]);
     const rateId = extractRateId(data);
+    const rateValidity =
+      extractFirstDefined(data, [
+        (payload) => payload?.rateValidity,
+        (payload) => payload?.data?.rateValidity,
+        (payload) => payload?.payload?.rateValidity,
+        (payload) => payload?.payload?.data?.rateValidity,
+        (payload) => payload?.result?.rateValidity,
+        (payload) => payload?.result?.data?.rateValidity
+      ]) || "";
 
     return {
       ok: res.ok && price > 0,
       price,
+      pricePerGram: price,
       rateId,
+      rateValidity,
       raw: data,
       message: res.ok ? "" : data?.message || data?.payload?.message || "Failed to fetch sell price"
     };
@@ -336,7 +347,9 @@ export const fetchSafeGoldSellPrice = async () => {
     return {
       ok: false,
       price: 0,
+      pricePerGram: 0,
       rateId: "",
+      rateValidity: "",
       message: "Failed to fetch sell price"
     };
   }
