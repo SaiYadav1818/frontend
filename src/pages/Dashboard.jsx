@@ -1,90 +1,116 @@
-import { useEffect } from "react";
-import { useNavigate, Outlet } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardNavbar from "../components/DashboardNavbar";
+import { fetchLiveGoldRateSnapshot } from "../api/augmontApi";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+
+  const [gold, setGold] = useState(0);
+  const [value, setValue] = useState(0);
+  const [invested, setInvested] = useState(0);
 
   useEffect(() => {
     const logged = localStorage.getItem("isLoggedIn");
     if (!logged) navigate("/login");
   }, [navigate]);
 
+  useEffect(() => {
+    const loadPortfolioSnapshot = async () => {
+      const stored = Number(localStorage.getItem("goldBalance") || 0);
+      setGold(stored);
+
+      try {
+        const rates = await fetchLiveGoldRateSnapshot();
+        const price = Number(
+          rates?.snapshot?.gold?.buyPrice || rates?.snapshot?.buyPrice || 0
+        );
+
+        localStorage.setItem("goldPrice", String(price));
+        setValue(stored * price);
+        setInvested(stored * price * 0.9);
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    loadPortfolioSnapshot();
+    window.addEventListener("goldBalanceUpdated", loadPortfolioSnapshot);
+
+    return () =>
+      window.removeEventListener("goldBalanceUpdated", loadPortfolioSnapshot);
+  }, []);
+
   return (
-    <div className="bg-black min-h-screen text-white">
+    <div className="min-h-screen bg-black text-white">
       <DashboardNavbar />
 
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-
-       
-
-        {/* HERO */}
-        <div className="bg-gradient-to-r from-yellow-900/30 to-black border border-yellow-500/20 rounded-2xl p-10 flex justify-between items-center">
+      <div className="mx-auto max-w-7xl space-y-8 p-6">
+        <div className="flex items-center justify-between rounded-2xl border border-yellow-500/20 bg-gradient-to-r from-yellow-900/30 to-black p-10">
           <div>
             <h1 className="text-5xl font-bold">
-              Welcome to <span className="text-yellow-400">SabPe Gold ✨</span>
+              Welcome to <span className="text-yellow-400">SabPe Gold</span>
             </h1>
-            <p className="text-gray-400 mt-3">
+            <p className="mt-3 text-gray-400">
               Track. Invest. Grow your digital gold wealth.
             </p>
           </div>
 
           <button
-  onClick={() => navigate("/portfolio")}
-  className="bg-yellow-400 text-black px-8 py-3 rounded-full font-semibold hover:scale-105 transition"
->
-  Invest Now →
-</button>
+            onClick={() => navigate("/portfolio")}
+            className="rounded-full bg-yellow-400 px-8 py-3 font-semibold text-black transition hover:scale-105"
+          >
+            Invest Now
+          </button>
         </div>
 
-        {/* STATS */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div className="bg-[#111] p-6 rounded-xl">
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="rounded-xl bg-[#111] p-6">
             <p className="text-gray-400">Portfolio Value</p>
-            <h2 className="text-3xl text-yellow-400">₹0.00</h2>
+            <h2 className="text-3xl text-yellow-400">
+              Rs {value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+            </h2>
           </div>
 
-          <div className="bg-[#111] p-6 rounded-xl">
+          <div className="rounded-xl bg-[#111] p-6">
             <p className="text-gray-400">Gold</p>
-            <h2 className="text-3xl">0 g</h2>
+            <h2 className="text-3xl">{gold.toFixed(3)} g</h2>
           </div>
 
-          <div className="bg-[#111] p-6 rounded-xl">
+          <div className="rounded-xl bg-[#111] p-6">
             <p className="text-gray-400">Invested</p>
-            <h2 className="text-3xl">₹0</h2>
+            <h2 className="text-3xl">
+              Rs {invested.toLocaleString("en-IN", { maximumFractionDigits: 0 })}
+            </h2>
           </div>
         </div>
 
-        {/* SHOP */}
         <div>
-          <div className="flex justify-between mb-4">
+          <div className="mb-4 flex justify-between">
             <h2 className="text-xl font-semibold">Shop Gold</h2>
 
             <button
               onClick={() => navigate("/products")}
               className="text-yellow-400"
             >
-              View All →
+              View All
             </button>
-            
           </div>
 
-          <div className="grid md:grid-cols-4 gap-6">
-            {["1g", "5g", "10g", "Custom"].map((item, i) => (
+          <div className="grid gap-6 md:grid-cols-4">
+            {["1g", "5g", "10g", "Custom"].map((item, index) => (
               <div
-                key={i}
+                key={index}
                 onClick={() => navigate("/products")}
-                className="bg-[#111] p-4 rounded-xl cursor-pointer hover:border-yellow-400 border border-transparent"
+                className="cursor-pointer rounded-xl border border-transparent bg-[#111] p-4 hover:border-yellow-400"
               >
-                <div className="h-24 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded mb-3"></div>
+                <div className="mb-3 h-24 rounded bg-gradient-to-r from-yellow-400 to-yellow-600" />
                 <p>{item} Gold</p>
-                <p className="text-yellow-400">₹500+</p>
+                <p className="text-yellow-400">Rs 500+</p>
               </div>
             ))}
           </div>
         </div>
-
-       
       </div>
     </div>
   );

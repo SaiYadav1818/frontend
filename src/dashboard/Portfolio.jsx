@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import BuyGold from "./BuyGold";
 import SellGold from "./SellGold";
 import GoldPriceChart from "../components/GoldPriceChart";
-import { getGoldRates } from "../api/augmontApi";
+import { fetchLiveGoldRateSnapshot } from "../api/augmontApi";
 
 const PRODUCT_SELECTION_KEY = "selectedGoldProduct";
 
@@ -45,10 +45,8 @@ export default function Portfolio() {
       setGold(stored);
 
       try {
-        const rates = await getGoldRates();
-        const price = parseFloat(
-          rates?.payload?.result?.data?.rates?.gBuy || 0
-        );
+        const rates = await fetchLiveGoldRateSnapshot();
+        const price = Number(rates?.snapshot?.gold?.buyPrice || rates?.snapshot?.buyPrice || 0);
 
         localStorage.setItem("goldPrice", price);
         setValue(stored * price);

@@ -62,6 +62,15 @@ const extractProfileFromAuthResponse = (data) => {
       data?.mobileNumber ||
       data?.payload?.mobileNumber ||
       "",
+    pinCode:
+      user?.pinCode ||
+      user?.pincode ||
+      user?.userPincode ||
+      data?.pinCode ||
+      data?.pincode ||
+      data?.payload?.pinCode ||
+      data?.payload?.pincode ||
+      "",
     uniqueId:
       user?.uniqueId ||
       user?.augmontUniqueId ||
@@ -115,6 +124,7 @@ export const setUserProfile = ({
   fullName = "",
   email = "",
   mobileNumber = "",
+  pinCode = "",
   uniqueId = "",
   partnerUserId = ""
 } = {}) => {
@@ -126,6 +136,7 @@ export const setUserProfile = ({
       buildDisplayName({ fullName, email, mobileNumber }),
     email: email?.trim() || existingProfile?.email || "",
     mobileNumber: mobileNumber?.trim() || existingProfile?.mobileNumber || "",
+    pinCode: pinCode?.trim() || existingProfile?.pinCode || "",
     uniqueId: uniqueId?.trim() || existingProfile?.uniqueId || "",
     partnerUserId:
       String(partnerUserId || "").trim() || existingProfile?.partnerUserId || ""
@@ -230,6 +241,7 @@ export const verifyOtp = async ({
         fullName: fullName || backendProfile.fullName,
         email: email || backendProfile.email,
         mobileNumber: mobileNumber || backendProfile.mobileNumber,
+        pinCode: backendProfile.pinCode,
         uniqueId: backendProfile.uniqueId,
         partnerUserId: backendProfile.partnerUserId
       });

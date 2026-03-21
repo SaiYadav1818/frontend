@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { getUserProfile } from "../api/authApi";
+import { getUserProfile, setUserProfile } from "../api/authApi";
 import {
+  confirmSafeGoldBuy,
+  fetchSafeGoldBuyStatus,
   fetchSafeGoldBuyPrice,
+  registerSafeGoldUser,
   verifySafeGoldBuy
 } from "../api/safeGoldApi";
 
@@ -46,16 +49,24 @@ export default function BuyGold({ selectedProduct = null }) {
   const [finalPrice, setFinalPrice] = useState(null);
   const [isRateLoading, setIsRateLoading] = useState(true);
   const [rateError, setRateError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isSubmittingVerify, setIsSubmittingVerify] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [inputMode, setInputMode] = useState("grams");
   const [purchaseSummary, setPurchaseSummary] = useState(null);
   const [hasAppliedSelectedProduct, setHasAppliedSelectedProduct] = useState(false);
+  const [txId, setTxId] = useState("");
+  const [buyFlowStatus, setBuyFlowStatus] = useState("idle");
+  const [buyFlowError, setBuyFlowError] = useState("");
+  const [finalStatus, setFinalStatus] = useState(null);
+  const [resolvedPartnerUserId, setResolvedPartnerUserId] = useState(() =>
+    getUserProfile()?.partnerUserId || localStorage.getItem("partnerUserId") || ""
+  );
+  const [isRegisteringUser, setIsRegisteringUser] = useState(false);
 
   const quickAmounts = [500, 1000, 2000, 5000];
-  const partnerUserId =
-    getUserProfile()?.partnerUserId ||
-    localStorage.getItem("partnerUserId") ||
-    "";
+  const userProfile = getUserProfile();
+  const partnerUserId = resolvedPartnerUserId;
 
   const total = useMemo(() => Number(amount || 0), [amount]);
   const parsedGrams = useMemo(() => Number.parseFloat(grams || "0"), [grams]);
@@ -161,35 +172,19 @@ export default function BuyGold({ selectedProduct = null }) {
       return;
     }
 
-    if (!partnerUserId || !rateId) {
-      setAmount(parsedAmount.toFixed(2));
-      setGrams(parsedNextGrams.toFixed(4));
-      return;
+    setAmount(parsedAmount.toFixed(2));
+    setGrams(parsedNextGrams.toFixed(4));
+
+    if (!silent && (!partnerUserId || !rateId)) {
+      toast.error("Live rate or partner user id is missing.");
     }
-
-    setIsVerifying(true);
-    const response = await verifySafeGoldBuy({
-      partnerUserId,
-      rateId,
-      goldAmount: parsedNextGrams,
-      buyPrice: parsedAmount
-    });
-    setIsVerifying(false);
-
-    if (!response?.ok) {
-      if (!silent) {
-        toast.error(response?.message || "Unable to verify buy calculation");
-      }
-      setAmount(parsedAmount.toFixed(2));
-      setGrams(parsedNextGrams.toFixed(4));
-      return;
-    }
-
-    setAmount(String(Number(response?.verified?.amount || parsedAmount).toFixed(2)));
-    setGrams(String(Number(response?.verified?.grams || parsedNextGrams).toFixed(4)));
   }, [partnerUserId, rateId]);
 
   const handleAmountChange = (value) => {
+    setTxId("");
+    setBuyFlowStatus("idle");
+    setBuyFlowError("");
+    setFinalStatus(null);
     setInputMode("amount");
     setAmount(value);
 
@@ -207,6 +202,10 @@ export default function BuyGold({ selectedProduct = null }) {
   };
 
   const handleGramChange = (value) => {
+    setTxId("");
+    setBuyFlowStatus("idle");
+    setBuyFlowError("");
+    setFinalStatus(null);
     setInputMode("grams");
     setGrams(value);
 
@@ -258,7 +257,7 @@ export default function BuyGold({ selectedProduct = null }) {
     return () => window.clearTimeout(timeoutId);
   }, [amount, grams, inputMode, rateId, partnerUserId, runBuyVerification]);
 
-  const handleBuy = async () => {
+  const handleVerifyBuy = async () => {
     if (!hasLiveRate) {
       toast.error("Live gold rate is unavailable. Please retry.");
       return;
@@ -275,24 +274,206 @@ export default function BuyGold({ selectedProduct = null }) {
       return;
     }
 
-    const updated = goldOwned + parsedGrams;
-    localStorage.setItem("goldBalance", updated.toFixed(3));
-    setGoldOwned(updated);
-    setPurchaseSummary({
-      grams: parsedGrams,
-      total,
+    let activePartnerUserId = partnerUserId;
+
+    if (!activePartnerUserId) {
+      const name = userProfile?.fullName || selectedProduct?.name || "SafeGold User";
+      const mobileNo = userProfile?.mobileNumber || "";
+      const email = userProfile?.email || "";
+      const pinCode = userProfile?.pinCode || "500001";
+
+      if (!mobileNo || !email) {
+        toast.error("App user profile is missing email or mobile number.");
+        return;
+      }
+
+      setIsRegisteringUser(true);
+      const registrationResponse = await registerSafeGoldUser({
+        name,
+        mobileNo,
+        pinCode,
+        email
+      });
+      setIsRegisteringUser(false);
+
+      if (!registrationResponse?.ok || !registrationResponse?.user?.id) {
+        const message =
+          registrationResponse?.message || "Unable to register SafeGold user";
+        setBuyFlowStatus("failed");
+        setBuyFlowError(message);
+        toast.error(message);
+        return;
+      }
+
+      activePartnerUserId = String(registrationResponse.user.id);
+      setResolvedPartnerUserId(activePartnerUserId);
+      localStorage.setItem("partnerUserId", activePartnerUserId);
+      setUserProfile({
+        fullName: userProfile?.fullName || registrationResponse.user.name,
+        email: userProfile?.email || registrationResponse.user.email,
+        mobileNumber: userProfile?.mobileNumber || registrationResponse.user.mobileNo,
+        pinCode: userProfile?.pinCode || registrationResponse.user.pinCode,
+        uniqueId: userProfile?.uniqueId || "",
+        partnerUserId: activePartnerUserId
+      });
+    }
+
+    setIsSubmittingVerify(true);
+    setBuyFlowError("");
+    setFinalStatus(null);
+
+    const response = await verifySafeGoldBuy({
+      partnerUserId: activePartnerUserId,
       rateId,
+      goldAmount: parsedGrams,
+      buyPrice: total
+    });
+
+    setIsSubmittingVerify(false);
+
+    if (!response?.ok || !response?.verified?.txId) {
+      const message =
+        response?.message || "Unable to verify SafeGold buy transaction";
+      setBuyFlowStatus("failed");
+      setBuyFlowError(message);
+      toast.error(message);
+      return;
+    }
+
+    setTxId(String(response.verified.txId));
+    setAmount(String(Number(response?.verified?.amount || total).toFixed(2)));
+    setGrams(String(Number(response?.verified?.grams || parsedGrams).toFixed(4)));
+    setBuyFlowStatus("verified");
+    toast.success("Buy verified. You can confirm after payment success.");
+  };
+
+  const handleConfirmBuy = async () => {
+    if (!partnerUserId) {
+      toast.error("Partner user id is missing.");
+      return;
+    }
+
+    if (!txId) {
+      toast.error("Verify the buy first to get a valid txId.");
+      return;
+    }
+
+    setIsConfirming(true);
+    setBuyFlowError("");
+
+    const confirmResponse = await confirmSafeGoldBuy({
+      partnerUserId,
+      txId
+    });
+
+    setIsConfirming(false);
+
+    if (!confirmResponse?.ok) {
+      const message = confirmResponse?.message || "Buy confirm failed";
+      setBuyFlowStatus("failed");
+      setBuyFlowError(message);
+      toast.error(message);
+      return;
+    }
+
+    setBuyFlowStatus("confirming");
+    setIsCheckingStatus(true);
+
+    const statusResponse = await fetchSafeGoldBuyStatus({ txId });
+
+    setIsCheckingStatus(false);
+
+    if (!statusResponse?.ok) {
+      const message = statusResponse?.message || "Unable to fetch final status";
+      setBuyFlowStatus("pending");
+      setBuyFlowError(message);
+      toast.error(message);
+      return;
+    }
+
+    const resolvedStatus = String(statusResponse?.status?.status || "").toLowerCase();
+    const updated = goldOwned + parsedGrams;
+
+    setFinalStatus(statusResponse.status);
+    setPurchaseSummary({
+      grams: Number(statusResponse?.status?.grams || parsedGrams),
+      total: Number(statusResponse?.status?.amount || total),
+      rateId,
+      txId,
       goldPrice,
       applicableTax,
       finalPrice: displayedFinalPrice,
-      rateValidity
+      rateValidity,
+      status: statusResponse?.status?.status || "Pending"
     });
 
-    window.dispatchEvent(new Event("goldBalanceUpdated"));
+    if (resolvedStatus.includes("success") || resolvedStatus.includes("complete")) {
+      localStorage.setItem("goldBalance", updated.toFixed(3));
+      setGoldOwned(updated);
+      window.dispatchEvent(new Event("goldBalanceUpdated"));
+      setBuyFlowStatus("success");
+      toast.success("SafeGold buy confirmed successfully.");
+      return;
+    }
 
-    toast.success(
-      `Bought ${parsedGrams}g gold for ${currencyFormatter.format(total)}`
-    );
+    if (resolvedStatus.includes("fail")) {
+      setBuyFlowStatus("failed");
+      toast.error("Buy status returned failure.");
+      return;
+    }
+
+    setBuyFlowStatus("pending");
+    toast("Buy confirmation is pending. Please check status again.");
+  };
+
+  const handleRefreshStatus = async () => {
+    if (!txId) {
+      toast.error("No txId found yet.");
+      return;
+    }
+
+    setIsCheckingStatus(true);
+    const statusResponse = await fetchSafeGoldBuyStatus({ txId });
+    setIsCheckingStatus(false);
+
+    if (!statusResponse?.ok) {
+      toast.error(statusResponse?.message || "Unable to fetch buy status");
+      return;
+    }
+
+    const resolvedStatus = String(statusResponse?.status?.status || "").toLowerCase();
+    setFinalStatus(statusResponse.status);
+    setPurchaseSummary((current) => ({
+      ...(current || {}),
+      grams: Number(statusResponse?.status?.grams || parsedGrams),
+      total: Number(statusResponse?.status?.amount || total),
+      rateId,
+      txId,
+      goldPrice,
+      applicableTax,
+      finalPrice: displayedFinalPrice,
+      rateValidity,
+      status: statusResponse?.status?.status || "Pending"
+    }));
+
+    if (resolvedStatus.includes("success") || resolvedStatus.includes("complete")) {
+      const updated = goldOwned + parsedGrams;
+      localStorage.setItem("goldBalance", updated.toFixed(3));
+      setGoldOwned(updated);
+      window.dispatchEvent(new Event("goldBalanceUpdated"));
+      setBuyFlowStatus("success");
+      toast.success("Buy status is successful.");
+      return;
+    }
+
+    if (resolvedStatus.includes("fail")) {
+      setBuyFlowStatus("failed");
+      toast.error("Buy status returned failure.");
+      return;
+    }
+
+    setBuyFlowStatus("pending");
+    toast("Buy status is still pending.");
   };
 
   const displayedFinalPrice = finalPrice || total || goldPrice;
@@ -305,9 +486,19 @@ export default function BuyGold({ selectedProduct = null }) {
         : "Waiting for live rate"
     },
     {
+      label: "SafeGold user registered",
+      done: Boolean(partnerUserId),
+      value: partnerUserId || "Will be created from /users/register when needed"
+    },
+    {
       label: "Rate ID stored for downstream flow",
       done: Boolean(rateId),
       value: rateId || "Will be stored once rate loads"
+    },
+    {
+      label: "Buy verify completed",
+      done: Boolean(txId),
+      value: txId || "Verify buy to create transaction and store txId"
     },
     {
       label: "Purchase details calculated",
@@ -333,8 +524,8 @@ export default function BuyGold({ selectedProduct = null }) {
                 Price updated till {formatRateValidity(rateValidity)}
               </span>
             ) : null}
-            {isVerifying ? (
-              <span className="text-yellow-300">Verifying...</span>
+            {isSubmittingVerify ? (
+              <span className="text-yellow-300">Creating tx...</span>
             ) : null}
           </div>
         </div>
@@ -577,6 +768,51 @@ export default function BuyGold({ selectedProduct = null }) {
         </div>
       </div>
 
+      <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
+        <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-cyan-200">SafeGold Buy Journey</p>
+            <p className="mt-1 text-xs text-white/60">
+              Full wrapper flow: buy-price, buy-verify, buy-confirm, then buy-status.
+            </p>
+          </div>
+          <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
+            {buyFlowStatus === "idle" ? "Not started" : buyFlowStatus}
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg bg-black/20 p-3">
+            <p className="text-xs text-white/45">Stored partnerUserId</p>
+            <p className="mt-1 text-sm font-medium text-white">
+              {partnerUserId || "Not created yet"}
+            </p>
+          </div>
+          <div className="rounded-lg bg-black/20 p-3">
+            <p className="text-xs text-white/45">Stored rateId</p>
+            <p className="mt-1 text-sm font-medium text-white">{rateId || "NA"}</p>
+          </div>
+          <div className="rounded-lg bg-black/20 p-3">
+            <p className="text-xs text-white/45">Stored txId</p>
+            <p className="mt-1 text-sm font-medium text-white">{txId || "Not created yet"}</p>
+          </div>
+          {finalStatus?.status ? (
+            <div className="rounded-lg bg-black/20 p-3 sm:col-span-2">
+              <p className="text-xs text-white/45">Latest status response</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {finalStatus.status}
+                {finalStatus.message ? ` - ${finalStatus.message}` : ""}
+              </p>
+            </div>
+          ) : null}
+          {buyFlowError ? (
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-200 sm:col-span-2">
+              {buyFlowError}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
       {purchaseSummary ? (
         <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
           <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
@@ -618,6 +854,12 @@ export default function BuyGold({ selectedProduct = null }) {
                 {purchaseSummary.rateId}
               </p>
             </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">Tx ID</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {purchaseSummary.txId || txId || "NA"}
+              </p>
+            </div>
             {purchaseSummary.applicableTax !== null &&
             purchaseSummary.applicableTax > 0 ? (
               <div className="rounded-lg bg-black/20 p-3">
@@ -633,6 +875,14 @@ export default function BuyGold({ selectedProduct = null }) {
                 {currencyFormatter.format(purchaseSummary.finalPrice)}
               </p>
             </div>
+            {purchaseSummary.status ? (
+              <div className="rounded-lg bg-black/20 p-3">
+                <p className="text-xs text-white/45">Final status</p>
+                <p className="mt-1 text-sm font-medium text-white">
+                  {purchaseSummary.status}
+                </p>
+              </div>
+            ) : null}
             {purchaseSummary.rateValidity ? (
               <div className="rounded-lg bg-black/20 p-3 sm:col-span-2">
                 <p className="text-xs text-white/45">Rate validity</p>
@@ -645,13 +895,41 @@ export default function BuyGold({ selectedProduct = null }) {
         </div>
       ) : null}
 
-      <button
-        onClick={handleBuy}
-        disabled={!hasLiveRate || isRateLoading}
-        className="w-full rounded-xl bg-yellow-500 py-3 text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        Buy Gold
-      </button>
+      <div className="grid gap-3 md:grid-cols-3">
+        <button
+          onClick={handleVerifyBuy}
+          disabled={
+            !hasLiveRate ||
+            isRateLoading ||
+            isSubmittingVerify ||
+            isConfirming ||
+            isRegisteringUser
+          }
+          className="w-full rounded-xl bg-yellow-500 py-3 text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isRegisteringUser
+            ? "Registering User..."
+            : isSubmittingVerify
+              ? "Verifying Buy..."
+              : "Verify Buy"}
+        </button>
+
+        <button
+          onClick={handleConfirmBuy}
+          disabled={!txId || isConfirming || isSubmittingVerify}
+          className="w-full rounded-xl border border-cyan-500/30 bg-cyan-500/10 py-3 text-cyan-100 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isConfirming ? "Confirming..." : "Confirm Buy"}
+        </button>
+
+        <button
+          onClick={handleRefreshStatus}
+          disabled={!txId || isCheckingStatus}
+          className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isCheckingStatus ? "Checking Status..." : "Check Buy Status"}
+        </button>
+      </div>
     </div>
   );
 }
