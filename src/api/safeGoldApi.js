@@ -148,6 +148,62 @@ const extractVerifiedTrade = (data, fallback = {}) => {
         fallback.amount
     ),
     rateId: String(result?.rateId || fallback.rateId || ""),
+    txId: String(
+      result?.txId ||
+        result?.transactionId ||
+        result?.txnId ||
+        fallback.txId ||
+        ""
+    ),
+    status: String(result?.status || result?.transactionStatus || ""),
+    raw: result
+  };
+};
+
+const extractTransactionStatus = (data, fallback = {}) => {
+  const payload = Array.isArray(data) ? data[0] : data;
+  const result =
+    payload?.payload?.result?.data ||
+    payload?.payload?.result ||
+    payload?.result?.data ||
+    payload?.result ||
+    payload?.data ||
+    payload ||
+    {};
+
+  return {
+    txId: String(
+      result?.txId ||
+        result?.transactionId ||
+        result?.txnId ||
+        fallback.txId ||
+        ""
+    ),
+    status: String(
+      result?.status ||
+        result?.transactionStatus ||
+        result?.orderStatus ||
+        fallback.status ||
+        ""
+    ),
+    message: String(
+      result?.message ||
+        result?.statusMessage ||
+        fallback.message ||
+        ""
+    ),
+    grams: toNumber(
+      result?.goldAmount ??
+        result?.quantity ??
+        result?.grams ??
+        fallback.grams
+    ),
+    amount: toNumber(
+      result?.buyPrice ??
+        result?.amount ??
+        result?.payableAmount ??
+        fallback.amount
+    ),
     raw: result
   };
 };
@@ -310,6 +366,61 @@ export const fetchSafeGoldBuyPrice = async () => {
   }
 };
 
+export const registerSafeGoldUser = async ({
+  name,
+  mobileNo,
+  pinCode,
+  email
+}) => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/users/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        name: String(name || "").trim(),
+        mobileNo: String(mobileNo || "").trim(),
+        pinCode: String(pinCode || "").trim(),
+        email: String(email || "").trim()
+      })
+    });
+
+    const data = await getJson(res);
+    const payload = Array.isArray(data) ? data[0] : data;
+
+    return {
+      ok: res.ok && Boolean(payload?.id),
+      user: {
+        id: String(payload?.id || ""),
+        name: payload?.name || name || "",
+        mobileNo: payload?.mobileNo || mobileNo || "",
+        pinCode: payload?.pincode || payload?.pinCode || pinCode || "",
+        email: payload?.email || email || "",
+        goldBalance: toNumber(payload?.goldBalance)
+      },
+      raw: data,
+      message: res.ok
+        ? ""
+        : payload?.message || data?.message || "SafeGold user registration failed"
+    };
+  } catch (error) {
+    console.error("SAFEGOLD USER REGISTER ERROR:", error);
+    return {
+      ok: false,
+      user: {
+        id: "",
+        name: name || "",
+        mobileNo: mobileNo || "",
+        pinCode: pinCode || "",
+        email: email || "",
+        goldBalance: 0
+      },
+      message: "SafeGold user registration failed"
+    };
+  }
+};
+
 export const fetchSafeGoldSellPrice = async () => {
   try {
     const res = await fetch(`${BASE_URL}/api/v1/gold/sell-price`, {
@@ -449,9 +560,81 @@ export const verifySafeGoldBuy = async ({
       verified: {
         grams: 0,
         amount: 0,
-        rateId: String(rateId || "")
+        rateId: String(rateId || ""),
+        txId: "",
+        status: ""
       },
       message: "Buy verification failed"
+    };
+  }
+};
+
+export const confirmSafeGoldBuy = async ({
+  partnerUserId,
+  txId,
+  date
+}) => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/gold/buy/confirm`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        partnerUserId: Number(partnerUserId),
+        request: {
+          txId: Number(txId),
+          date: date || new Date().toISOString().slice(0, 19).replace("T", " ")
+        }
+      })
+    });
+
+    const data = await getJson(res);
+    return {
+      ok: res.ok,
+      confirmation: extractTransactionStatus(data, { txId }),
+      raw: data,
+      message: res.ok
+        ? ""
+        : data?.message || data?.payload?.message || "Buy confirmation failed"
+    };
+  } catch (error) {
+    console.error("SAFEGOLD BUY CONFIRM ERROR:", error);
+    return {
+      ok: false,
+      confirmation: extractTransactionStatus({}, { txId }),
+      message: "Buy confirmation failed"
+    };
+  }
+};
+
+export const fetchSafeGoldBuyStatus = async ({ txId }) => {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/gold/buy/status`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        txId: String(txId || "")
+      })
+    });
+
+    const data = await getJson(res);
+    return {
+      ok: res.ok,
+      status: extractTransactionStatus(data, { txId }),
+      raw: data,
+      message: res.ok
+        ? ""
+        : data?.message || data?.payload?.message || "Buy status fetch failed"
+    };
+  } catch (error) {
+    console.error("SAFEGOLD BUY STATUS ERROR:", error);
+    return {
+      ok: false,
+      status: extractTransactionStatus({}, { txId }),
+      message: "Buy status fetch failed"
     };
   }
 };

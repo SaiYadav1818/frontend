@@ -281,6 +281,7 @@ export default function Signup() {
       fullName: formValues.userName.trim(),
       email: formValues.emailId.trim(),
       mobileNumber: formValues.mobileNumber.trim(),
+      pinCode: formValues.userPincode.trim(),
       uniqueId
     });
 
