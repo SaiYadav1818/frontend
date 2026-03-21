@@ -147,22 +147,38 @@ export const isAuthenticated = () =>
   localStorage.getItem("isLoggedIn") === "true" && Boolean(getAuthToken());
 
 /* ---------------- SEND OTP (REGISTER / LOGIN) ---------------- */
-export const sendOtp = async ({ mobileNumber, email, type = "login" }) => {
+export const sendOtp = async ({
+  mobileNumber,
+  email,
+  fullName,
+  type = "login"
+}) => {
   try {
     const endpoint =
       type === "register"
         ? "/auth/register/send-otp"
         : "/auth/login/send-otp";
 
+    const body =
+      type === "register"
+        ? {
+            mobileNumber,
+            email,
+            emailId: email,
+            fullName,
+            userName: fullName
+          }
+        : {
+            mobileNumber,
+            email
+          };
+
     const res = await fetch(`${BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        mobileNumber,
-        email
-      })
+      body: JSON.stringify(body)
     });
 
     const data = await getJson(res);
