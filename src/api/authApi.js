@@ -126,7 +126,14 @@ export const setUserProfile = ({
   mobileNumber = "",
   pinCode = "",
   uniqueId = "",
-  partnerUserId = ""
+  partnerUserId = "",
+  customerMappedId = "",
+  augmontStateId = "",
+  augmontCityId = "",
+  augmontState = "",
+  augmontCity = "",
+  augmontKycStatus = "",
+  augmontCreatedAt = ""
 } = {}) => {
   const existingProfile = getUserProfile();
   const nextProfile = {
@@ -139,7 +146,27 @@ export const setUserProfile = ({
     pinCode: pinCode?.trim() || existingProfile?.pinCode || "",
     uniqueId: uniqueId?.trim() || existingProfile?.uniqueId || "",
     partnerUserId:
-      String(partnerUserId || "").trim() || existingProfile?.partnerUserId || ""
+      String(partnerUserId || "").trim() || existingProfile?.partnerUserId || "",
+    customerMappedId:
+      String(customerMappedId || "").trim() ||
+      existingProfile?.customerMappedId ||
+      "",
+    augmontStateId:
+      String(augmontStateId || "").trim() || existingProfile?.augmontStateId || "",
+    augmontCityId:
+      String(augmontCityId || "").trim() || existingProfile?.augmontCityId || "",
+    augmontState:
+      String(augmontState || "").trim() || existingProfile?.augmontState || "",
+    augmontCity:
+      String(augmontCity || "").trim() || existingProfile?.augmontCity || "",
+    augmontKycStatus:
+      String(augmontKycStatus || "").trim() ||
+      existingProfile?.augmontKycStatus ||
+      "",
+    augmontCreatedAt:
+      String(augmontCreatedAt || "").trim() ||
+      existingProfile?.augmontCreatedAt ||
+      ""
   };
 
   localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(nextProfile));

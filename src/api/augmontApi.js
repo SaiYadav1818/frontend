@@ -100,6 +100,39 @@ const setStoredAugmontUser = (user) => {
   );
 };
 
+export const normalizeAugmontUserProfile = (data, fallbackUniqueId = "") => {
+  const result =
+    data?.payload?.result?.data ||
+    data?.payload?.result ||
+    data?.payload?.data ||
+    data?.data ||
+    data ||
+    {};
+
+  return {
+    userName: result?.userName || result?.name || "",
+    uniqueId:
+      result?.uniqueId ||
+      result?.userUniqueId ||
+      result?.customerUniqueId ||
+      fallbackUniqueId,
+    customerMappedId: result?.customerMappedId || "",
+    mobileNumber: result?.mobileNumber || result?.mobileNo || "",
+    userEmail: result?.userEmail || result?.emailId || result?.email || "",
+    userStateId: result?.userStateId || result?.stateId || "",
+    userCityId: result?.userCityId || result?.cityId || "",
+    userPincode:
+      result?.userPincode || result?.pincode || result?.pinCode || "",
+    kycStatus: result?.kycStatus || "",
+    userState: result?.userState || "",
+    userCity: result?.userCity || "",
+    createdAt: result?.createdAt || "",
+    userBankId: result?.userBankId || "",
+    userAddressId: result?.userAddressId || "",
+    raw: result
+  };
+};
+
 const selectProductImage = (images) => {
   if (!Array.isArray(images) || images.length === 0) return "";
 
@@ -187,20 +220,21 @@ const extractAugmontSession = (data) => {
 };
 
 const extractAugmontUser = (data, fallbackUniqueId = "") => {
-  const result =
-    data?.payload?.result?.data ||
-    data?.payload?.result ||
-    data?.payload?.data ||
-    data?.data ||
-    {};
+  const result = normalizeAugmontUserProfile(data, fallbackUniqueId);
 
   return {
-    uniqueId:
-      result?.uniqueId ||
-      result?.userUniqueId ||
-      result?.customerUniqueId ||
-      data?.uniqueId ||
-      fallbackUniqueId,
+    userName: result?.userName || "",
+    uniqueId: result?.uniqueId || data?.uniqueId || fallbackUniqueId,
+    customerMappedId: result?.customerMappedId || "",
+    mobileNumber: result?.mobileNumber || "",
+    userEmail: result?.userEmail || "",
+    userStateId: result?.userStateId || "",
+    userCityId: result?.userCityId || "",
+    userPincode: result?.userPincode || "",
+    kycStatus: result?.kycStatus || "",
+    userState: result?.userState || "",
+    userCity: result?.userCity || "",
+    createdAt: result?.createdAt || "",
     userBankId: result?.userBankId || "",
     userAddressId: result?.userAddressId || ""
   };
@@ -210,6 +244,8 @@ const findRateValue = (container = {}, keys = []) =>
   pickFirstPositiveNumber(...keys.map((key) => container?.[key]));
 
 const extractOrderResult = (data) =>
+  data?.result?.data ||
+  data?.result ||
   data?.payload?.result?.data ||
   data?.payload?.result ||
   data?.payload?.data ||
@@ -507,6 +543,7 @@ export const clearAugmontSession = () => {
 };
 
 export const getAugmontUser = () => getStoredAugmontUser();
+export const setAugmontUser = (user) => setStoredAugmontUser(user);
 
 /* ---------------- AUTH ---------------- */
 
@@ -770,62 +807,33 @@ export const fetchAugmontPassbook = async (uniqueId) => {
 export const fetchAugmontProducts = async (
   page = 1,
   count = 10,
-  token,
   merchantId
 ) => {
   try {
     const resolvedMerchantId = merchantId || DEFAULT_MERCHANT_ID;
 
-    if (!token || !resolvedMerchantId) {
+    if (!resolvedMerchantId) {
       return {
         ok: false,
-        message: "Missing Augmont session. Please retry."
+        message: "Missing merchantId. Please retry."
       };
     }
 
-    const requestProducts = async (activeToken, activeMerchantId) => {
-      const res = await fetch(`${BASE_URL}/api/v1/products/list`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${activeToken}`
-        },
-        body: JSON.stringify({
-          merchantId: activeMerchantId,
-          page,
-          count
-        })
-      });
+    const res = await fetch(`${BASE_URL}/api/v1/products/list`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        merchantId: resolvedMerchantId,
+        page,
+        count
+      })
+    });
 
-      return {
-        res,
-        data: await getJson(res),
-        merchantId: activeMerchantId,
-        token: activeToken
-      };
-    };
-
-    let { res, data } = await requestProducts(token, resolvedMerchantId);
-
-    if (res.status === 401 || res.status === 403) {
-      clearAugmontSession();
-      const refreshedSession = await loginAugmont({ force: true });
-
-      if (refreshedSession?.ok && refreshedSession?.token) {
-        const retryResponse = await requestProducts(
-          refreshedSession.token,
-          refreshedSession.merchantId || DEFAULT_MERCHANT_ID
-        );
-        res = retryResponse.res;
-        data = retryResponse.data;
-      }
-    }
+    const data = await getJson(res);
 
     if (!res.ok || data?.status !== "success") {
-      if (res.status === 401 || res.status === 403) {
-        clearAugmontSession();
-      }
-
       return {
         ok: false,
         message: extractBackendMessage(data, "Failed to fetch products"),
@@ -1068,7 +1076,10 @@ export const createAugmontBuyOrder = async ({
     order,
     references,
     raw: response.raw,
-    message: response.data?.payload?.message || "Buy order created successfully"
+    message:
+      response.data?.message ||
+      response.data?.payload?.message ||
+      "Buy order created successfully"
   };
 };
 

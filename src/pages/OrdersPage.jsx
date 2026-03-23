@@ -41,6 +41,12 @@ const getOrderKey = (order) =>
 
 const prettyJson = (value) => JSON.stringify(value || {}, null, 2);
 
+const getEmptyStateMessage = (filter) => {
+  if (filter === "SELL") return "No sell orders found.";
+  if (filter === "BUY") return "No buy orders found.";
+  return "No Augmont orders found.";
+};
+
 export default function OrdersPage() {
   const [filter, setFilter] = useState("ALL");
   const [orders, setOrders] = useState([]);
@@ -237,7 +243,7 @@ export default function OrdersPage() {
           </div>
         ) : filteredOrders.length === 0 ? (
           <div className="rounded-2xl border border-white/10 bg-[#111] p-8 text-center text-gray-400">
-            No Augmont orders found.
+            {getEmptyStateMessage(filter)}
           </div>
         ) : (
           <div className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
