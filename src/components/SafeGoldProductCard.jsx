@@ -9,10 +9,22 @@ const formatPrice = (price) =>
 
 function SafeGoldProductCard({ product, onClick, onBuy }) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const handleOpen = () => {
+    onClick(product?.skuNumber);
+  };
+
   return (
-    <button
-      type="button"
-      onClick={() => onClick(product?.skuNumber)}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          handleOpen();
+        }
+      }}
       className="overflow-hidden rounded-2xl border border-gray-800 bg-[#111] text-left transition hover:-translate-y-1.5"
     >
       {product?.image ? (
@@ -120,7 +132,7 @@ function SafeGoldProductCard({ product, onClick, onBuy }) {
           </button>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
 
