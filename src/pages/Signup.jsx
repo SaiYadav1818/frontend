@@ -4,6 +4,12 @@ import { CheckCircle2, MapPinned, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import RegistrationForm from "../components/RegistrationForm";
 import { sendOtp, setUserProfile, verifyOtp } from "../api/authApi";
+import {
+  createAugmontAddress,
+  createAugmontUser,
+  setAugmontUser
+} from "../api/augmontApi";
+import { registerSafeGoldUser } from "../api/safeGoldApi";
 
 const initialFormValues = {
   userName: "",
@@ -12,6 +18,7 @@ const initialFormValues = {
   uniqueId: "",
   stateName: "",
   cityName: "",
+  address: "",
   userPincode: "",
   dateOfBirth: "",
   otp: ""
@@ -54,6 +61,10 @@ const buildValidationErrors = (values, otpSent = false) => {
     errors.cityName = "Enter a city name";
   }
 
+  if (!values.address.trim()) {
+    errors.address = "Enter an address";
+  }
+
   if (!pincodeRegex.test(values.userPincode.trim())) {
     errors.userPincode = "Enter a valid 6-digit pincode";
   }
@@ -85,6 +96,7 @@ export default function Signup() {
   const [otpSent, setOtpSent] = useState(false);
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [signupWarning, setSignupWarning] = useState("");
   const goldCoins = useMemo(() => Array.from({ length: 8 }), []);
 
   const handleChange = (name, value) => {
@@ -152,6 +164,7 @@ export default function Signup() {
 
     setSubmitting(true);
     setSubmitError("");
+    setSignupWarning("");
 
     const verifyResponse = await verifyOtp({
       fullName: formValues.userName.trim(),
@@ -169,6 +182,35 @@ export default function Signup() {
       return;
     }
 
+    const [safeGoldResponse, augmontResponse] = await Promise.all([
+      registerSafeGoldUser({
+        name: formValues.userName.trim(),
+        mobileNo: formValues.mobileNumber.trim(),
+        pinCode: formValues.userPincode.trim(),
+        email: formValues.emailId.trim()
+      }),
+      createAugmontUser({
+        mobileNumber: formValues.mobileNumber.trim(),
+        emailId: formValues.emailId.trim(),
+        uniqueId: formValues.uniqueId.trim(),
+        userName: formValues.userName.trim(),
+        stateName: formValues.stateName.trim(),
+        cityName: formValues.cityName.trim(),
+        userPincode: formValues.userPincode.trim()
+      })
+    ]);
+
+    let augmontAddressResponse = null;
+
+    if (augmontResponse?.ok) {
+      augmontAddressResponse = await createAugmontAddress({
+        uniqueId: formValues.uniqueId.trim(),
+        request: {
+          address: formValues.address.trim()
+        }
+      });
+    }
+
     setSubmitting(false);
 
     setUserProfile({
@@ -177,9 +219,52 @@ export default function Signup() {
       mobileNumber: formValues.mobileNumber.trim(),
       pinCode: formValues.userPincode.trim(),
       uniqueId: formValues.uniqueId.trim(),
+      partnerUserId: safeGoldResponse?.user?.id || "",
       augmontState: formValues.stateName.trim(),
-      augmontCity: formValues.cityName.trim()
+      augmontCity: formValues.cityName.trim(),
+      augmontAddress: formValues.address.trim()
     });
+
+    if (augmontResponse?.ok) {
+      setAugmontUser({
+        uniqueId: formValues.uniqueId.trim(),
+        userName: formValues.userName.trim(),
+        mobileNumber: formValues.mobileNumber.trim(),
+        emailId: formValues.emailId.trim(),
+        stateName: formValues.stateName.trim(),
+        cityName: formValues.cityName.trim(),
+        address: formValues.address.trim(),
+        userPincode: formValues.userPincode.trim(),
+        profileExists: true
+      });
+    }
+
+    const warnings = [];
+
+    if (!safeGoldResponse?.ok) {
+      warnings.push(
+        safeGoldResponse?.message ||
+          "SafeGold registration could not be completed."
+      );
+    }
+
+    if (!augmontResponse?.ok) {
+      warnings.push(
+        augmontResponse?.message ||
+          "Augmont user creation could not be completed."
+      );
+    } else if (!augmontAddressResponse?.ok) {
+      warnings.push(
+        augmontAddressResponse?.message ||
+          "Augmont address creation could not be completed."
+      );
+    }
+
+    if (warnings.length > 0) {
+      const warningMessage = warnings.join(" ");
+      setSignupWarning(warningMessage);
+      toast.error(warningMessage);
+    }
 
     setSuccess(true);
     toast.success("Registration completed successfully");
@@ -298,10 +383,15 @@ export default function Signup() {
                   </div>
                   <h2 className="mt-6 text-3xl font-bold text-white">Registration successful</h2>
                   <p className="mt-3 max-w-lg text-sm leading-7 text-yellow-100/80">
-                    Your gold account has been created through the shared wrapper flow. You can
-                    continue with the existing login and OTP journey using your registered mobile
-                    number and email.
+                    Your app account has been created through the auth backend, and the signup
+                    flow also attempted SafeGold registration with the same name, mobile number,
+                    email, and pincode.
                   </p>
+                  {signupWarning ? (
+                    <div className="mt-5 max-w-lg rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+                      {signupWarning}
+                    </div>
+                  ) : null}
                   <button
                     type="button"
                     onClick={() => navigate("/dashboard")}
@@ -316,8 +406,8 @@ export default function Signup() {
                     <h2 className="text-3xl font-bold text-white">Register</h2>
                     <p className="text-sm leading-6 text-yellow-100/80">
                       {otpSent
-                        ? "Verify the OTP to complete app registration. Provider onboarding now happens later through wrapper APIs after login."
-                        : "Fill your details once. This step creates only the app account; gold wrapper onboarding starts after login."}
+                        ? "Verify the OTP to complete app registration. On success, the same signup details are also sent to SafeGold registration."
+                        : "Fill your details once. This step completes app registration and also triggers SafeGold registration using the same signup details."}
                     </p>
                   </div>
 

@@ -108,6 +108,20 @@ export default function RegistrationForm({
           />
         </FormField>
 
+        <div className="md:col-span-2">
+          <FormField id="address" label="Address" error={errors.address} required>
+            <textarea
+              id="address"
+              rows={3}
+              value={formValues.address}
+              onChange={(event) => onChange("address", event.target.value)}
+              disabled={otpSent}
+              placeholder="Enter your address"
+              className={inputBaseClassName}
+            />
+          </FormField>
+        </div>
+
         <FormField id="userPincode" label="Pincode" error={errors.userPincode} required>
           <input
             id="userPincode"
