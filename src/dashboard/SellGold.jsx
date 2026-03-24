@@ -46,6 +46,7 @@ export default function SellGold() {
   const [rateError, setRateError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [sellSummary, setSellSummary] = useState(null);
+  const [verifyResponseDetails, setVerifyResponseDetails] = useState(null);
 
   const quickGrams = [0.5, 1, 2, 5];
   const partnerUserId =
@@ -110,6 +111,7 @@ export default function SellGold() {
     const parsedNextGrams = Number(nextGrams);
 
     if (!Number.isFinite(parsedNextGrams) || parsedNextGrams <= 0) {
+      setVerifyResponseDetails(null);
       setGrams("");
       setAmount("");
       return;
@@ -118,6 +120,7 @@ export default function SellGold() {
     const estimatedAmount = Number((parsedNextGrams * goldPrice).toFixed(2));
 
     if (!partnerUserId) {
+      setVerifyResponseDetails(null);
       setGrams(String(parsedNextGrams));
       setAmount(estimatedAmount.toFixed(2));
       return;
@@ -135,16 +138,19 @@ export default function SellGold() {
       if (!silent) {
         toast.error(response?.message || "Unable to verify sell calculation");
       }
+      setVerifyResponseDetails(null);
       setGrams(String(parsedNextGrams.toFixed(4)));
       setAmount(estimatedAmount.toFixed(2));
       return;
     }
 
+    setVerifyResponseDetails(response.verified);
     setGrams(String(Number(response?.verified?.grams || parsedNextGrams).toFixed(4)));
     setAmount(String(Number(response?.verified?.amount || estimatedAmount).toFixed(2)));
   }, [goldPrice, partnerUserId]);
 
   const handleGramInputChange = (value) => {
+    setVerifyResponseDetails(null);
     setGrams(value);
 
     if (value === "") {
@@ -368,6 +374,73 @@ export default function SellGold() {
           ))}
         </div>
       </div>
+
+      {verifyResponseDetails ? (
+        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-sky-200">Sell Verify Response</p>
+              <p className="mt-1 text-xs text-white/60">
+                Values returned by `/api/v1/gold/sell/verify`.
+              </p>
+            </div>
+            <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs text-sky-100">
+              Verified
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">txId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.txId || "NA"}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">rateId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.rateId || "NA"}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">sgRate</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.sgRate
+                  ? currencyFormatter.format(verifyResponseDetails.sgRate)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">goldAmount</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {formatGrams(verifyResponseDetails.grams)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">sellPrice</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {currencyFormatter.format(verifyResponseDetails.amount || 0)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">preGstBuyPrice</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.preGstBuyPrice
+                  ? currencyFormatter.format(verifyResponseDetails.preGstBuyPrice)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">gstAmount</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.gstAmount
+                  ? currencyFormatter.format(verifyResponseDetails.gstAmount)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">userId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.userId || "NA"}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
         <div className="flex items-center justify-between text-sm text-white/60">

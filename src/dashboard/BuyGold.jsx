@@ -5,6 +5,7 @@ import {
   confirmSafeGoldBuy,
   fetchSafeGoldBuyStatus,
   fetchSafeGoldBuyPrice,
+  fetchSafeGoldInvoice,
   registerSafeGoldUser,
   verifySafeGoldBuy
 } from "../api/safeGoldApi";
@@ -17,6 +18,24 @@ const currencyFormatter = new Intl.NumberFormat("en-IN", {
 
 const formatGrams = (value) => `${Number(value || 0).toFixed(4)} g`;
 const BUY_RATE_REFRESH_MS = 60000;
+
+const resolveBuyStatusState = (status) => {
+  const normalized = String(status ?? "").trim().toLowerCase();
+
+  if (normalized === "1" || normalized.includes("success") || normalized.includes("complete")) {
+    return "success";
+  }
+
+  if (normalized === "2" || normalized.includes("fail")) {
+    return "failed";
+  }
+
+  if (normalized === "0" || normalized.includes("pending") || normalized.includes("confirm")) {
+    return "pending";
+  }
+
+  return "pending";
+};
 
 const formatRateValidity = (value) => {
   if (!value) return "";
@@ -52,8 +71,10 @@ export default function BuyGold({ selectedProduct = null }) {
   const [isSubmittingVerify, setIsSubmittingVerify] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isLoadingInvoice, setIsLoadingInvoice] = useState(false);
   const [inputMode, setInputMode] = useState("grams");
   const [purchaseSummary, setPurchaseSummary] = useState(null);
+  const [verifyResponseDetails, setVerifyResponseDetails] = useState(null);
   const [hasAppliedSelectedProduct, setHasAppliedSelectedProduct] = useState(false);
   const [txId, setTxId] = useState("");
   const [buyFlowStatus, setBuyFlowStatus] = useState("idle");
@@ -185,6 +206,7 @@ export default function BuyGold({ selectedProduct = null }) {
     setBuyFlowStatus("idle");
     setBuyFlowError("");
     setFinalStatus(null);
+    setVerifyResponseDetails(null);
     setInputMode("amount");
     setAmount(value);
 
@@ -206,6 +228,7 @@ export default function BuyGold({ selectedProduct = null }) {
     setBuyFlowStatus("idle");
     setBuyFlowError("");
     setFinalStatus(null);
+    setVerifyResponseDetails(null);
     setInputMode("grams");
     setGrams(value);
 
@@ -335,6 +358,7 @@ export default function BuyGold({ selectedProduct = null }) {
         response?.message || "Unable to verify SafeGold buy transaction";
       setBuyFlowStatus("failed");
       setBuyFlowError(message);
+      setVerifyResponseDetails(null);
       toast.error(message);
       return;
     }
@@ -342,27 +366,17 @@ export default function BuyGold({ selectedProduct = null }) {
     setTxId(String(response.verified.txId));
     setAmount(String(Number(response?.verified?.amount || total).toFixed(2)));
     setGrams(String(Number(response?.verified?.grams || parsedGrams).toFixed(4)));
+    setVerifyResponseDetails(response.verified);
     setBuyFlowStatus("verified");
-    toast.success("Buy verified. You can confirm after payment success.");
-  };
-
-  const handleConfirmBuy = async () => {
-    if (!partnerUserId) {
-      toast.error("Partner user id is missing.");
-      return;
-    }
-
-    if (!txId) {
-      toast.error("Verify the buy first to get a valid txId.");
-      return;
-    }
+    toast.success("Buy verified. Confirming transaction now.");
 
     setIsConfirming(true);
     setBuyFlowError("");
 
     const confirmResponse = await confirmSafeGoldBuy({
-      partnerUserId,
-      txId
+      partnerUserId: activePartnerUserId,
+      txId: response.verified.txId,
+      pincode: userProfile?.pinCode || "500001"
     });
 
     setIsConfirming(false);
@@ -378,7 +392,9 @@ export default function BuyGold({ selectedProduct = null }) {
     setBuyFlowStatus("confirming");
     setIsCheckingStatus(true);
 
-    const statusResponse = await fetchSafeGoldBuyStatus({ txId });
+    const statusResponse = await fetchSafeGoldBuyStatus({
+      txId: response.verified.txId
+    });
 
     setIsCheckingStatus(false);
 
@@ -390,39 +406,46 @@ export default function BuyGold({ selectedProduct = null }) {
       return;
     }
 
-    const resolvedStatus = String(statusResponse?.status?.status || "").toLowerCase();
+    const resolvedStatus = resolveBuyStatusState(statusResponse?.status?.status);
     const updated = goldOwned + parsedGrams;
+    const statusMessage =
+      statusResponse?.status?.message ||
+      (resolvedStatus === "success"
+        ? "Transaction successful."
+        : resolvedStatus === "failed"
+          ? "Transaction failed."
+          : "Transaction not confirmed.");
 
     setFinalStatus(statusResponse.status);
     setPurchaseSummary({
       grams: Number(statusResponse?.status?.grams || parsedGrams),
       total: Number(statusResponse?.status?.amount || total),
       rateId,
-      txId,
+      txId: String(response.verified.txId),
       goldPrice,
       applicableTax,
       finalPrice: displayedFinalPrice,
       rateValidity,
-      status: statusResponse?.status?.status || "Pending"
+      status: statusMessage
     });
 
-    if (resolvedStatus.includes("success") || resolvedStatus.includes("complete")) {
+    if (resolvedStatus === "success") {
       localStorage.setItem("goldBalance", updated.toFixed(3));
       setGoldOwned(updated);
       window.dispatchEvent(new Event("goldBalanceUpdated"));
       setBuyFlowStatus("success");
-      toast.success("SafeGold buy confirmed successfully.");
+      toast.success(statusMessage);
       return;
     }
 
-    if (resolvedStatus.includes("fail")) {
+    if (resolvedStatus === "failed") {
       setBuyFlowStatus("failed");
-      toast.error("Buy status returned failure.");
+      toast.error(statusMessage);
       return;
     }
 
     setBuyFlowStatus("pending");
-    toast("Buy confirmation is pending. Please check status again.");
+    toast(statusMessage);
   };
 
   const handleRefreshStatus = async () => {
@@ -440,7 +463,14 @@ export default function BuyGold({ selectedProduct = null }) {
       return;
     }
 
-    const resolvedStatus = String(statusResponse?.status?.status || "").toLowerCase();
+    const resolvedStatus = resolveBuyStatusState(statusResponse?.status?.status);
+    const statusMessage =
+      statusResponse?.status?.message ||
+      (resolvedStatus === "success"
+        ? "Transaction successful."
+        : resolvedStatus === "failed"
+          ? "Transaction failed."
+          : "Transaction not confirmed.");
     setFinalStatus(statusResponse.status);
     setPurchaseSummary((current) => ({
       ...(current || {}),
@@ -452,27 +482,47 @@ export default function BuyGold({ selectedProduct = null }) {
       applicableTax,
       finalPrice: displayedFinalPrice,
       rateValidity,
-      status: statusResponse?.status?.status || "Pending"
+      status: statusMessage
     }));
 
-    if (resolvedStatus.includes("success") || resolvedStatus.includes("complete")) {
+    if (resolvedStatus === "success") {
       const updated = goldOwned + parsedGrams;
       localStorage.setItem("goldBalance", updated.toFixed(3));
       setGoldOwned(updated);
       window.dispatchEvent(new Event("goldBalanceUpdated"));
       setBuyFlowStatus("success");
-      toast.success("Buy status is successful.");
+      toast.success(statusMessage);
       return;
     }
 
-    if (resolvedStatus.includes("fail")) {
+    if (resolvedStatus === "failed") {
       setBuyFlowStatus("failed");
-      toast.error("Buy status returned failure.");
+      toast.error(statusMessage);
       return;
     }
 
     setBuyFlowStatus("pending");
-    toast("Buy status is still pending.");
+    toast(statusMessage);
+  };
+
+  const handleOpenInvoice = async () => {
+    if (!txId) {
+      toast.error("No txId found yet.");
+      return;
+    }
+
+    setIsLoadingInvoice(true);
+    const invoiceResponse = await fetchSafeGoldInvoice({ txId });
+    setIsLoadingInvoice(false);
+
+    const link = String(invoiceResponse?.invoice?.link || "").trim();
+
+    if (!invoiceResponse?.ok || !link) {
+      toast.error(invoiceResponse?.message || "Invoice link is unavailable");
+      return;
+    }
+
+    window.open(link, "_blank", "noopener,noreferrer");
   };
 
   const displayedFinalPrice = finalPrice || total || goldPrice;
@@ -740,6 +790,73 @@ export default function BuyGold({ selectedProduct = null }) {
         </div>
       </div>
 
+      {verifyResponseDetails ? (
+        <div className="rounded-xl border border-sky-500/20 bg-sky-500/5 p-4">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-sky-200">Buy Verify Response</p>
+              <p className="mt-1 text-xs text-white/60">
+                Values returned by `/api/v1/gold/buy/verify`.
+              </p>
+            </div>
+            <span className="rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1 text-xs text-sky-100">
+              Verified and confirming
+            </span>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">txId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.txId || "NA"}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">rateId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.rateId || "NA"}</p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">sgRate</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.sgRate
+                  ? currencyFormatter.format(verifyResponseDetails.sgRate)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">goldAmount</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {formatGrams(verifyResponseDetails.grams)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">buyPrice</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {currencyFormatter.format(verifyResponseDetails.amount || 0)}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">preGstBuyPrice</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.preGstBuyPrice
+                  ? currencyFormatter.format(verifyResponseDetails.preGstBuyPrice)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">gstAmount</p>
+              <p className="mt-1 text-sm font-medium text-white">
+                {verifyResponseDetails.gstAmount
+                  ? currencyFormatter.format(verifyResponseDetails.gstAmount)
+                  : "NA"}
+              </p>
+            </div>
+            <div className="rounded-lg bg-black/20 p-3">
+              <p className="text-xs text-white/45">userId</p>
+              <p className="mt-1 text-sm font-medium text-white">{verifyResponseDetails.userId || "NA"}</p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-4">
         <div className="flex items-center justify-between text-sm text-white/60">
           <span>You receive</span>
@@ -772,7 +889,7 @@ export default function BuyGold({ selectedProduct = null }) {
           <div>
             <p className="text-sm font-semibold text-cyan-200">SafeGold Buy Journey</p>
             <p className="mt-1 text-xs text-white/60">
-              Full wrapper flow: buy-price, buy-verify, buy-confirm, then buy-status.
+              Full wrapper flow: buy-price, buy-verify, auto buy-confirm, then buy-status.
             </p>
           </div>
           <span className="rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-100">
@@ -820,7 +937,7 @@ export default function BuyGold({ selectedProduct = null }) {
                 Purchase prepared successfully
               </p>
               <p className="mt-1 text-xs text-white/60">
-                The latest SafeGold rate and transaction details are now visible below for the next verify or confirm step.
+                The latest SafeGold rate and transaction details are now visible below for the completed buy flow.
               </p>
             </div>
             <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200">
@@ -910,15 +1027,9 @@ export default function BuyGold({ selectedProduct = null }) {
             ? "Registering User..."
             : isSubmittingVerify
               ? "Verifying Buy..."
-              : "Verify Buy"}
-        </button>
-
-        <button
-          onClick={handleConfirmBuy}
-          disabled={!txId || isConfirming || isSubmittingVerify}
-          className="w-full rounded-xl border border-cyan-500/30 bg-cyan-500/10 py-3 text-cyan-100 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {isConfirming ? "Confirming..." : "Confirm Buy"}
+              : isConfirming
+                ? "Confirming Buy..."
+                : "Verify Buy"}
         </button>
 
         <button
@@ -927,6 +1038,14 @@ export default function BuyGold({ selectedProduct = null }) {
           className="w-full rounded-xl border border-white/10 bg-white/5 py-3 text-white transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {isCheckingStatus ? "Checking Status..." : "Check Buy Status"}
+        </button>
+
+        <button
+          onClick={handleOpenInvoice}
+          disabled={!txId || isLoadingInvoice}
+          className="w-full rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-3 text-emerald-100 transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isLoadingInvoice ? "Opening Invoice..." : "Invoice"}
         </button>
       </div>
     </div>

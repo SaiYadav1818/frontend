@@ -9,11 +9,15 @@ import { getUserProfile, setUserProfile } from "../api/authApi";
 import {
   createAugmontAddress,
   createAugmontBuyOrder,
+  fetchAugmontBuyInvoice,
+  createAugmontSellOrder,
+  fetchAugmontSellInvoice,
   fetchAugmontUserProfile,
   createAugmontUser,
   createAugmontUserBank,
   fetchAugmontAddresses,
   fetchAugmontKycProfile,
+  fetchAugmontUserBanks,
   fetchAugmontProducts,
   getAugmontSession,
   getAugmontUser,
@@ -82,10 +86,18 @@ export default function Products() {
     quantity: "0.1000",
     modeOfPayment: "UPI"
   });
+  const [augmontSellForm, setAugmontSellForm] = useState({
+    quantity: "0.0500",
+    userBankId: ""
+  });
   const [resolvedAugmontUniqueId, setResolvedAugmontUniqueId] = useState("");
   const [createdAugmontUser, setCreatedAugmontUser] = useState(null);
   const [augmontBuyOrder, setAugmontBuyOrder] = useState(null);
+  const [augmontBuyInvoice, setAugmontBuyInvoice] = useState(null);
+  const [augmontSellOrder, setAugmontSellOrder] = useState(null);
+  const [augmontSellInvoice, setAugmontSellInvoice] = useState(null);
   const [augmontAddresses, setAugmontAddresses] = useState([]);
+  const [augmontBanks, setAugmontBanks] = useState([]);
   const [augmontKycProfile, setAugmontKycProfile] = useState(null);
   const [onboardingForm, setOnboardingForm] = useState({
     userName: "",
@@ -104,6 +116,12 @@ export default function Products() {
   const [setupError, setSetupError] = useState("");
   const [buyLoading, setBuyLoading] = useState(false);
   const [buyError, setBuyError] = useState("");
+  const [buyInvoiceLoading, setBuyInvoiceLoading] = useState(false);
+  const [buyInvoiceError, setBuyInvoiceError] = useState("");
+  const [sellInvoiceLoading, setSellInvoiceLoading] = useState(false);
+  const [sellInvoiceError, setSellInvoiceError] = useState("");
+  const [sellLoading, setSellLoading] = useState(false);
+  const [sellError, setSellError] = useState("");
   const productRequestRef = useRef({
     inFlight: false,
     key: ""
@@ -228,6 +246,53 @@ export default function Products() {
     return () => window.clearTimeout(timeoutId);
   }, [loadAugmontProducts, loadSafeGoldProducts]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAugmontBanks = async () => {
+      if (!selectedAugmontProduct || !uniqueId) {
+        if (isMounted) {
+          setAugmontBanks([]);
+          setAugmontSellForm((current) => ({
+            ...current,
+            userBankId: ""
+          }));
+        }
+        return;
+      }
+
+      const response = await fetchAugmontUserBanks(uniqueId, sessionMerchantId);
+
+      if (!isMounted) return;
+
+      if (!response?.ok) {
+        setAugmontBanks([]);
+        setAugmontSellForm((current) => ({
+          ...current,
+          userBankId: ""
+        }));
+        return;
+      }
+
+      const nextBanks = Array.isArray(response.banks) ? response.banks : [];
+      const nextBankId = String(
+        nextBanks[0]?.userBankId || nextBanks[0]?.bankId || nextBanks[0]?.id || ""
+      );
+
+      setAugmontBanks(nextBanks);
+      setAugmontSellForm((current) => ({
+        ...current,
+        userBankId: current.userBankId || nextBankId
+      }));
+    };
+
+    loadAugmontBanks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedAugmontProduct, uniqueId, sessionMerchantId]);
+
   const handleProductClick = (sku) => {
     if (!sku) return;
     navigate(`/products?sku=${encodeURIComponent(sku)}`);
@@ -247,7 +312,11 @@ export default function Products() {
       });
       setCreatedAugmontUser(null);
       setAugmontBuyOrder(null);
+      setAugmontBuyInvoice(null);
+      setAugmontSellOrder(null);
+      setAugmontSellInvoice(null);
       setAugmontAddresses([]);
+      setAugmontBanks([]);
       setAugmontKycProfile(null);
       setResolvedAugmontUniqueId(nextUniqueId);
       setOnboardingForm({
@@ -286,8 +355,15 @@ export default function Products() {
         address: "",
         kycPayload: ""
       });
+      setAugmontSellForm({
+        quantity: "0.0500",
+        userBankId: ""
+      });
       setSetupError("");
       setBuyError("");
+      setBuyInvoiceError("");
+      setSellError("");
+      setSellInvoiceError("");
       return;
     }
 
@@ -430,6 +506,8 @@ export default function Products() {
 
     const addressesResponse = await fetchAugmontAddresses(nextUniqueId, sessionMerchantId);
     const nextAddresses = addressesResponse?.ok ? addressesResponse.addresses || [] : [];
+    const banksResponse = await fetchAugmontUserBanks(nextUniqueId, sessionMerchantId);
+    const nextBanks = banksResponse?.ok ? banksResponse.banks || [] : [];
 
     let nextKycProfile = null;
     if (onboardingForm.kycPayload.trim()) {
@@ -518,8 +596,15 @@ export default function Products() {
 
     setCreatedAugmontUser(persistedProfile);
     setAugmontAddresses(nextAddresses);
+    setAugmontBanks(nextBanks);
     setAugmontKycProfile(nextKycProfile);
     setResolvedAugmontUniqueId(persistedProfile.uniqueId);
+    setAugmontSellForm((current) => ({
+      ...current,
+      userBankId:
+        current.userBankId ||
+        String(nextBanks[0]?.userBankId || nextBanks[0]?.bankId || nextBanks[0]?.id || "")
+    }));
     setAugmontUser(persistedProfile);
     setUserProfile({
       fullName: appProfile?.fullName || persistedProfile.userName || "",
@@ -554,6 +639,9 @@ export default function Products() {
     setBuyLoading(true);
     setBuyError("");
     setAugmontBuyOrder(null);
+    setAugmontBuyInvoice(null);
+    setAugmontSellOrder(null);
+    setAugmontSellInvoice(null);
 
     const response = await createAugmontBuyOrder({
       merchantId: sessionMerchantId,
@@ -573,6 +661,107 @@ export default function Products() {
     }
 
     setAugmontBuyOrder(response.order || {});
+    setBuyInvoiceError("");
+  };
+
+  const handleCreateAugmontSellOrder = async () => {
+    if (!selectedAugmontProduct) return;
+
+    if (!uniqueId) {
+      setSellError("Complete Augmont user onboarding before placing the sell order.");
+      return;
+    }
+
+    if (!augmontSellForm.quantity) {
+      setSellError("Quantity is required.");
+      return;
+    }
+
+    if (!augmontSellForm.userBankId) {
+      setSellError("Select a saved bank account before placing the sell order.");
+      return;
+    }
+
+    setSellLoading(true);
+    setSellError("");
+    setAugmontSellOrder(null);
+    setAugmontBuyOrder(null);
+    setAugmontBuyInvoice(null);
+    setAugmontSellInvoice(null);
+
+    const response = await createAugmontSellOrder({
+      merchantId: sessionMerchantId,
+      request: {
+        metalType: String(selectedAugmontProduct?.metalType || "gold").toLowerCase(),
+        quantity: augmontSellForm.quantity,
+        uniqueId,
+        userBankId: augmontSellForm.userBankId
+      }
+    });
+
+    setSellLoading(false);
+
+    if (!response?.ok) {
+      setSellError(response?.message || "Unable to place Augmont sell order");
+      return;
+    }
+
+    setAugmontSellOrder(response.order || {});
+    setSellInvoiceError("");
+  };
+
+  const handleFetchAugmontBuyInvoice = async () => {
+    const transactionId = String(augmontBuyOrder?.transactionId || "").trim();
+
+    if (!transactionId) {
+      setBuyInvoiceError("Transaction ID is not available for invoice fetch.");
+      return;
+    }
+
+    setBuyInvoiceLoading(true);
+    setBuyInvoiceError("");
+
+    const response = await fetchAugmontBuyInvoice({
+      merchantId: sessionMerchantId,
+      transactionId
+    });
+
+    setBuyInvoiceLoading(false);
+
+    if (!response?.ok) {
+      setBuyInvoiceError(response?.message || "Unable to fetch buy invoice.");
+      setAugmontBuyInvoice(null);
+      return;
+    }
+
+    setAugmontBuyInvoice(response.invoice || {});
+  };
+
+  const handleFetchAugmontSellInvoice = async () => {
+    const transactionId = String(augmontSellOrder?.transactionId || "").trim();
+
+    if (!transactionId) {
+      setSellInvoiceError("Transaction ID is not available for invoice fetch.");
+      return;
+    }
+
+    setSellInvoiceLoading(true);
+    setSellInvoiceError("");
+
+    const response = await fetchAugmontSellInvoice({
+      merchantId: sessionMerchantId,
+      transactionId
+    });
+
+    setSellInvoiceLoading(false);
+
+    if (!response?.ok) {
+      setSellInvoiceError(response?.message || "Unable to fetch sell invoice.");
+      setAugmontSellInvoice(null);
+      return;
+    }
+
+    setAugmontSellInvoice(response.invoice || {});
   };
 
   const unifiedProducts = [
@@ -1021,9 +1210,88 @@ export default function Products() {
                   </div>
                 ) : null}
 
+                {onboardingReady ? (
+                  <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                    <p className="text-sm font-semibold text-emerald-200">
+                      Augmont sell order create is now available
+                    </p>
+                    <p className="mt-2 text-xs text-white/60">
+                      This step calls `orders/sell/create` using the stored `uniqueId` and a saved bank account. Backend fills provider-managed fields internally and creates the Augmont sell order.
+                    </p>
+
+                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-2 block text-sm text-white/60">Quantity</span>
+                        <input
+                          type="number"
+                          value={augmontSellForm.quantity}
+                          onChange={(event) =>
+                            setAugmontSellForm((current) => ({
+                              ...current,
+                              quantity: event.target.value
+                            }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-[#111] px-4 py-3 outline-none"
+                        />
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-2 block text-sm text-white/60">Saved bank account</span>
+                        <select
+                          value={augmontSellForm.userBankId}
+                          onChange={(event) =>
+                            setAugmontSellForm((current) => ({
+                              ...current,
+                              userBankId: event.target.value
+                            }))
+                          }
+                          className="w-full rounded-xl border border-white/10 bg-[#111] px-4 py-3 outline-none"
+                        >
+                          <option value="">Select bank account</option>
+                          {augmontBanks.map((bank, index) => {
+                            const bankId = String(
+                              bank?.userBankId || bank?.bankId || bank?.id || `bank-${index}`
+                            );
+                            const bankName =
+                              bank?.accountName || bank?.account_holder_name || bank?.name || "Bank Account";
+                            const bankNumber =
+                              bank?.accountNumber || bank?.account_number || "No account number";
+
+                            return (
+                              <option key={bankId} value={bankId}>
+                                {`${bankName} - ${bankNumber}`}
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </label>
+                    </div>
+
+                    {sellError ? (
+                      <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                        {sellError}
+                      </div>
+                    ) : null}
+
+                    {augmontBanks.length === 0 ? (
+                      <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-white/70">
+                        No saved bank accounts found. Complete Augmont bank setup first.
+                      </div>
+                    ) : null}
+
+                    <button
+                      onClick={handleCreateAugmontSellOrder}
+                      disabled={sellLoading || augmontBanks.length === 0}
+                      className="mt-4 w-full rounded-xl bg-emerald-400 py-3 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {sellLoading ? "Placing Sell Order..." : "Confirm Sell Order (Augmont)"}
+                    </button>
+                  </div>
+                ) : null}
+
                 <button
                   onClick={handleCreateAugmontUser}
-                  disabled={setupLoading || buyLoading}
+                  disabled={setupLoading || buyLoading || sellLoading}
                   className="w-full rounded-xl bg-yellow-500 py-3 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {setupLoading
@@ -1036,10 +1304,16 @@ export default function Products() {
 
               <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                 <p className="text-sm font-semibold text-white">
-                  {augmontBuyOrder ? "Buy Order Success" : "Created User Profile"}
+                  {augmontSellOrder
+                    ? "Augmont Sell Order Success"
+                    : augmontBuyOrder
+                      ? "Buy Order Success"
+                      : "Created User Profile"}
                 </p>
                 <p className="mt-2 text-xs text-white/50">
-                  {augmontBuyOrder
+                  {augmontSellOrder
+                    ? "On success, the UI uses `payload.result.data` from the sell-order create response."
+                    : augmontBuyOrder
                     ? "On success, the UI uses `payload.result.data` from the buy-order create response."
                     : "On success, the UI uses `payload.result.data` from the user-create response and stores the returned identifiers for later Augmont flows."}
                 </p>
@@ -1047,6 +1321,114 @@ export default function Products() {
                 {!onboardingReady ? (
                   <div className="mt-6 rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/45">
                     Complete the wrapper onboarding form to see Augmont profile, KYC, and address data here.
+                  </div>
+                ) : augmontSellOrder ? (
+                  <div className="mt-6 space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Sold quantity</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontSellOrder.quantity || "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Total amount</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          Rs {formatPrice(augmontSellOrder.totalAmount)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Pre-tax amount</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          Rs {formatPrice(augmontSellOrder.preTaxAmount)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Rate</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          Rs {formatPrice(augmontSellOrder.rate)}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Transaction ID</p>
+                        <p className="mt-1 break-all text-sm font-medium text-white">
+                          {augmontSellOrder.transactionId || "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Merchant transaction ID</p>
+                        <p className="mt-1 break-all text-sm font-medium text-white">
+                          {augmontSellOrder.merchantTransactionId || "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Reference type</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontSellOrder.referenceType || "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Reference ID</p>
+                        <p className="mt-1 break-all text-sm font-medium text-white">
+                          {augmontSellOrder.referenceId || "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Updated gold balance</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontSellOrder.goldBalance ?? "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Updated silver balance</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontSellOrder.silverBalance ?? "NA"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Seller</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontSellOrder.userName || "NA"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-200">
+                            Sell Invoice
+                          </p>
+                          <p className="mt-1 text-xs text-white/60">
+                            This uses the `transactionId` returned by `orders/sell/create` internally. The user does not need to enter it.
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleFetchAugmontSellInvoice}
+                          disabled={sellInvoiceLoading}
+                          className="rounded-xl bg-emerald-400 px-5 py-2 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {sellInvoiceLoading ? "Fetching Invoice..." : "Fetch Sell Invoice"}
+                        </button>
+                      </div>
+
+                      {sellInvoiceError ? (
+                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                          {sellInvoiceError}
+                        </div>
+                      ) : null}
+
+                      {augmontSellInvoice ? (
+                        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+                          <p className="text-xs uppercase tracking-wide text-white/50">
+                            Invoice Response
+                          </p>
+                          <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/70">
+                            {JSON.stringify(augmontSellInvoice, null, 2)}
+                          </pre>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 ) : augmontBuyOrder ? (
                   <div className="mt-6 space-y-3">
@@ -1133,6 +1515,43 @@ export default function Products() {
                       <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/60">
                         {JSON.stringify(augmontBuyOrder?.taxes?.taxSplit || {}, null, 2)}
                       </pre>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-200">
+                            Buy Invoice
+                          </p>
+                          <p className="mt-1 text-xs text-white/60">
+                            This uses the `transactionId` returned by `orders/buy/create` internally. The user does not need to enter it.
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleFetchAugmontBuyInvoice}
+                          disabled={buyInvoiceLoading}
+                          className="rounded-xl bg-emerald-400 px-5 py-2 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {buyInvoiceLoading ? "Fetching Invoice..." : "Fetch Buy Invoice"}
+                        </button>
+                      </div>
+
+                      {buyInvoiceError ? (
+                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                          {buyInvoiceError}
+                        </div>
+                      ) : null}
+
+                      {augmontBuyInvoice ? (
+                        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+                          <p className="text-xs uppercase tracking-wide text-white/50">
+                            Invoice Response
+                          </p>
+                          <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/70">
+                            {JSON.stringify(augmontBuyInvoice, null, 2)}
+                          </pre>
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ) : (

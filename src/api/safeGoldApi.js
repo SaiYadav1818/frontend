@@ -145,6 +145,7 @@ const extractVerifiedTrade = (data, fallback = {}) => {
     {};
 
   return {
+    userId: String(result?.userId || result?.partnerUserId || fallback.userId || ""),
     grams: toNumber(
       result?.goldAmount ??
         result?.quantity ??
@@ -162,12 +163,28 @@ const extractVerifiedTrade = (data, fallback = {}) => {
         fallback.amount
     ),
     rateId: String(result?.rateId || fallback.rateId || ""),
+    sgRate: toNumber(
+      result?.sgRate ??
+        result?.rate ??
+        result?.currentPrice ??
+        fallback.sgRate
+    ),
     txId: String(
       result?.txId ||
         result?.transactionId ||
         result?.txnId ||
         fallback.txId ||
         ""
+    ),
+    preGstBuyPrice: toNumber(
+      result?.preGstBuyPrice ??
+        result?.preTaxBuyPrice ??
+        fallback.preGstBuyPrice
+    ),
+    gstAmount: toNumber(
+      result?.gstAmount ??
+        result?.taxAmount ??
+        fallback.gstAmount
     ),
     status: String(result?.status || result?.transactionStatus || ""),
     raw: result
@@ -475,7 +492,15 @@ export const fetchSafeGoldUserBalance = async ({ partnerUserId }) => {
     return {
       ok: res.ok,
       balance: {
-        partnerUserId: String(partnerUserId || ""),
+        partnerUserId: String(
+          payload?.id ??
+            payload?.partnerUserId ??
+            partnerUserId ??
+            ""
+        ),
+        name: String(payload?.name || ""),
+        mobileNo: String(payload?.mobileNo || ""),
+        pinCode: String(payload?.pincode || payload?.pinCode || ""),
         goldBalance: toNumber(
           payload?.goldBalance ??
             payload?.balance ??
@@ -496,6 +521,12 @@ export const fetchSafeGoldUserBalance = async ({ partnerUserId }) => {
             payload?.isKycCompleted ??
             payload?.kycVerified
         ),
+        kycRequirement: {
+          identityRequired: Boolean(
+            payload?.kycRequirement?.identityRequired
+          ),
+          panRequired: Boolean(payload?.kycRequirement?.panRequired)
+        },
         raw: payload
       },
       raw: data,
@@ -512,10 +543,17 @@ export const fetchSafeGoldUserBalance = async ({ partnerUserId }) => {
       ok: false,
       balance: {
         partnerUserId: String(partnerUserId || ""),
+        name: "",
+        mobileNo: "",
+        pinCode: "",
         goldBalance: 0,
         sellableBalance: 0,
         kycRequired: false,
         kycCompleted: false,
+        kycRequirement: {
+          identityRequired: false,
+          panRequired: false
+        },
         raw: {}
       },
       message: "Failed to fetch SafeGold balance"
@@ -548,6 +586,13 @@ export const fetchSafeGoldUserTransactions = async ({ partnerUserId }) => {
     return {
       ok: res.ok,
       transactions,
+      meta:
+        payload?.meta ||
+        data?.meta ||
+        {
+          previous: null,
+          next: null
+        },
       raw: data,
       message: res.ok
         ? ""
@@ -561,6 +606,10 @@ export const fetchSafeGoldUserTransactions = async ({ partnerUserId }) => {
     return {
       ok: false,
       transactions: [],
+      meta: {
+        previous: null,
+        next: null
+      },
       message: "Failed to fetch SafeGold transactions"
     };
   }

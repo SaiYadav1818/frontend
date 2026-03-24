@@ -755,6 +755,69 @@ export const createAugmontUserBank = async ({ uniqueId, request, merchantId }) =
     }
   });
 
+export const updateAugmontUserBank = async ({
+  uniqueId,
+  userBankId,
+  request,
+  merchantId
+}) =>
+  requestAugmontUserEndpoint("/api/v1/users/banks/update", {
+    merchantId: merchantId || DEFAULT_MERCHANT_ID,
+    uniqueId: String(uniqueId || "").trim(),
+    userBankId: String(userBankId || "").trim(),
+    request: {
+      accountNumber: String(request?.accountNumber || "").trim(),
+      accountName: String(request?.accountName || "").trim(),
+      ifscCode: String(request?.ifscCode || "").trim(),
+      status: String(request?.status || "active").trim()
+    }
+  });
+
+export const fetchAugmontUserBanks = async (uniqueId, merchantId) => {
+  if (!uniqueId) {
+    return {
+      ok: false,
+      message: "Missing Augmont uniqueId",
+      banks: []
+    };
+  }
+
+  const response = await requestAugmontUserEndpoint("/api/v1/users/banks/list", {
+    merchantId: merchantId || DEFAULT_MERCHANT_ID,
+    uniqueId: String(uniqueId || "").trim()
+  });
+
+  if (!response.ok) {
+    return {
+      ...response,
+      banks: []
+    };
+  }
+
+  const result =
+    response.data?.payload?.result?.data ||
+    response.data?.payload?.result ||
+    response.data?.data ||
+    [];
+
+  return {
+    ok: true,
+    banks: Array.isArray(result) ? result : [],
+    raw: response.raw
+  };
+};
+
+export const deleteAugmontUserBank = async ({
+  uniqueId,
+  userBankId,
+  merchantId
+}) =>
+  requestAugmontUserEndpoint("/api/v1/users/banks/delete", {
+    merchantId: merchantId || DEFAULT_MERCHANT_ID,
+    uniqueId: String(uniqueId || "").trim(),
+    userBankId: String(userBankId || "").trim()
+  });
+
 export const createAugmontAddress = async ({ uniqueId, request, merchantId }) =>
   requestAugmontUserEndpoint("/api/v1/users/addresses/create", {
     merchantId: merchantId || DEFAULT_MERCHANT_ID,
