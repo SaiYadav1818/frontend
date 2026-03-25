@@ -818,14 +818,34 @@ export const deleteAugmontUserBank = async ({
     userBankId: String(userBankId || "").trim()
   });
 
-export const createAugmontAddress = async ({ uniqueId, request, merchantId }) =>
-  requestAugmontUserEndpoint("/api/v1/users/addresses/create", {
-    merchantId: merchantId || DEFAULT_MERCHANT_ID,
+export const createAugmontAddress = async ({ uniqueId, request, merchantId }) => {
+  const resolvedMerchantId = merchantId || DEFAULT_MERCHANT_ID;
+  const response = await requestAugmontUserEndpoint("/api/v1/users/addresses/create", {
+    merchantId: resolvedMerchantId,
     uniqueId: String(uniqueId || "").trim(),
     request: {
       address: String(request?.address || "").trim()
     }
   });
+
+  if (!response.ok) {
+    return response;
+  }
+
+  const addressListResponse = await fetchAugmontAddresses(uniqueId, resolvedMerchantId);
+
+  return {
+    ok: true,
+    statusCode: response.statusCode,
+    message:
+      response.raw?.payload?.message ||
+      response.raw?.message ||
+      "Augmont address create request accepted",
+    addresses: addressListResponse?.addresses || [],
+    raw: response.raw,
+    addressListRaw: addressListResponse?.raw || null
+  };
+};
 
 export const fetchAugmontAddresses = async (uniqueId, merchantId) => {
   if (!uniqueId) {

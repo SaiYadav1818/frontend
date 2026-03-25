@@ -19,6 +19,7 @@ const initialFormValues = {
   stateName: "",
   cityName: "",
   address: "",
+  landmark: "",
   userPincode: "",
   dateOfBirth: "",
   otp: ""
@@ -32,6 +33,19 @@ const isValidDate = (value) => {
   if (!value) return false;
   const timestamp = Date.parse(value);
   return Number.isFinite(timestamp);
+};
+
+const pickCreatedAddress = (addresses, expectedAddress) => {
+  const normalizedExpectedAddress = String(expectedAddress || "").trim().toLowerCase();
+  if (!Array.isArray(addresses) || addresses.length === 0) {
+    return null;
+  }
+
+  return (
+    addresses.find((address) =>
+      String(address?.address || "").trim().toLowerCase() === normalizedExpectedAddress
+    ) || addresses[0]
+  );
 };
 
 const buildValidationErrors = (values, otpSent = false) => {
@@ -63,6 +77,10 @@ const buildValidationErrors = (values, otpSent = false) => {
 
   if (!values.address.trim()) {
     errors.address = "Enter an address";
+  }
+
+  if (!values.landmark.trim()) {
+    errors.landmark = "Enter a landmark";
   }
 
   if (!pincodeRegex.test(values.userPincode.trim())) {
@@ -213,6 +231,12 @@ export default function Signup() {
 
     setSubmitting(false);
 
+    const refreshedAddresses = augmontAddressResponse?.addresses || [];
+    const selectedAddress = pickCreatedAddress(
+      refreshedAddresses,
+      formValues.address.trim()
+    );
+
     setUserProfile({
       fullName: formValues.userName.trim(),
       email: formValues.emailId.trim(),
@@ -222,7 +246,9 @@ export default function Signup() {
       partnerUserId: safeGoldResponse?.user?.id || "",
       augmontState: formValues.stateName.trim(),
       augmontCity: formValues.cityName.trim(),
-      augmontAddress: formValues.address.trim()
+      augmontAddress: formValues.address.trim(),
+      augmontLandmark: formValues.landmark.trim(),
+      augmontUserAddressId: selectedAddress?.userAddressId || ""
     });
 
     if (augmontResponse?.ok) {
@@ -234,7 +260,10 @@ export default function Signup() {
         stateName: formValues.stateName.trim(),
         cityName: formValues.cityName.trim(),
         address: formValues.address.trim(),
+        landmark: formValues.landmark.trim(),
         userPincode: formValues.userPincode.trim(),
+        userAddressId: selectedAddress?.userAddressId || "",
+        addresses: refreshedAddresses,
         profileExists: true
       });
     }

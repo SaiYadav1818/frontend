@@ -160,8 +160,11 @@ const extractVerifiedTrade = (data, fallback = {}) => {
         result?.totalAmount ??
         result?.payableAmount ??
         result?.receivableAmount ??
+        result?.price ??
         fallback.amount
     ),
+    price: toNumber(result?.price ?? fallback.price),
+    estimatedDispatch: String(result?.estimatedDispatch || fallback.estimatedDispatch || ""),
     rateId: String(result?.rateId || fallback.rateId || ""),
     sgRate: toNumber(
       result?.sgRate ??

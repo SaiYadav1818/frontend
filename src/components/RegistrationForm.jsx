@@ -122,6 +122,18 @@ export default function RegistrationForm({
           </FormField>
         </div>
 
+        <FormField id="landmark" label="Landmark" error={errors.landmark} required>
+          <input
+            id="landmark"
+            type="text"
+            value={formValues.landmark}
+            onChange={(event) => onChange("landmark", event.target.value)}
+            disabled={otpSent}
+            placeholder="Nearby landmark"
+            className={inputBaseClassName}
+          />
+        </FormField>
+
         <FormField id="userPincode" label="Pincode" error={errors.userPincode} required>
           <input
             id="userPincode"

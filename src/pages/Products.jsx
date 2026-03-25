@@ -9,14 +9,12 @@ import { getUserProfile, setUserProfile } from "../api/authApi";
 import {
   createAugmontAddress,
   createAugmontBuyOrder,
-  fetchAugmontBuyInvoice,
+  createAugmontRedeemOrder,
   createAugmontSellOrder,
-  fetchAugmontSellInvoice,
   fetchAugmontUserProfile,
   createAugmontUser,
   createAugmontUserBank,
   fetchAugmontAddresses,
-  fetchAugmontKycProfile,
   fetchAugmontUserBanks,
   fetchAugmontProducts,
   getAugmontSession,
@@ -26,7 +24,7 @@ import {
   updateAugmontKyc,
   setAugmontUser
 } from "../api/augmontApi";
-import { fetchSafeGoldProducts } from "../api/safeGoldApi";
+import { fetchSafeGoldProducts, verifySafeGoldRedeem } from "../api/safeGoldApi";
 
 const initialPagination = {
   hasMore: false,
@@ -36,6 +34,7 @@ const initialPagination = {
 };
 
 const paymentModes = ["UPI", "NET_BANKING", "CARD"];
+const showLegacyTradeActions = false;
 const buildGeneratedUniqueId = () =>
   `AUG-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
 
@@ -80,6 +79,10 @@ export default function Products() {
   const [safeGoldProducts, setSafeGoldProducts] = useState([]);
   const [safeGoldLoading, setSafeGoldLoading] = useState(true);
   const [safeGoldError, setSafeGoldError] = useState("");
+  const [selectedSafeGoldProduct, setSelectedSafeGoldProduct] = useState(null);
+  const [safeGoldRedeemLoading, setSafeGoldRedeemLoading] = useState(false);
+  const [safeGoldRedeemError, setSafeGoldRedeemError] = useState("");
+  const [safeGoldRedeemResult, setSafeGoldRedeemResult] = useState(null);
 
   const [selectedAugmontProduct, setSelectedAugmontProduct] = useState(null);
   const [augmontBuyForm, setAugmontBuyForm] = useState({
@@ -90,15 +93,16 @@ export default function Products() {
     quantity: "0.0500",
     userBankId: ""
   });
+  const [augmontRedeemForm, setAugmontRedeemForm] = useState({
+    quantity: "1",
+    userAddressId: "",
+    modeOfPayment: "wallet"
+  });
   const [resolvedAugmontUniqueId, setResolvedAugmontUniqueId] = useState("");
   const [createdAugmontUser, setCreatedAugmontUser] = useState(null);
-  const [augmontBuyOrder, setAugmontBuyOrder] = useState(null);
-  const [augmontBuyInvoice, setAugmontBuyInvoice] = useState(null);
-  const [augmontSellOrder, setAugmontSellOrder] = useState(null);
-  const [augmontSellInvoice, setAugmontSellInvoice] = useState(null);
-  const [augmontAddresses, setAugmontAddresses] = useState([]);
+  const [augmontRedeemOrder, setAugmontRedeemOrder] = useState(null);
+  const [_augmontAddresses, setAugmontAddresses] = useState([]);
   const [augmontBanks, setAugmontBanks] = useState([]);
-  const [augmontKycProfile, setAugmontKycProfile] = useState(null);
   const [onboardingForm, setOnboardingForm] = useState({
     userName: "",
     mobileNumber: "",
@@ -116,16 +120,16 @@ export default function Products() {
   const [setupError, setSetupError] = useState("");
   const [buyLoading, setBuyLoading] = useState(false);
   const [buyError, setBuyError] = useState("");
-  const [buyInvoiceLoading, setBuyInvoiceLoading] = useState(false);
-  const [buyInvoiceError, setBuyInvoiceError] = useState("");
-  const [sellInvoiceLoading, setSellInvoiceLoading] = useState(false);
-  const [sellInvoiceError, setSellInvoiceError] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemError, setRedeemError] = useState("");
   const [sellLoading, setSellLoading] = useState(false);
   const [sellError, setSellError] = useState("");
   const productRequestRef = useRef({
     inFlight: false,
     key: ""
   });
+  const autoRedeemRequestRef = useRef("");
+  const autoRedeemRunnerRef = useRef(null);
 
   const appProfile = getUserProfile();
   const augmontUser = getAugmontUser();
@@ -162,6 +166,9 @@ export default function Products() {
       augmontUser?.customerMappedId ||
       appProfile?.customerMappedId
   );
+  const storedAugmontAddressId = String(
+    augmontUser?.userAddressId || appProfile?.augmontUserAddressId || ""
+  ).trim();
 
   const loadAugmontProducts = useCallback(async ({ page = 1, append = false } = {}) => {
     const requestKey = `${page}-10-${append ? "append" : "replace"}`;
@@ -293,6 +300,39 @@ export default function Products() {
     };
   }, [selectedAugmontProduct, uniqueId, sessionMerchantId]);
 
+  useEffect(() => {
+    if (!selectedAugmontProduct || !onboardingReady || redeemLoading || augmontRedeemOrder) {
+      return;
+    }
+
+    const resolvedAddressId = storedAugmontAddressId;
+
+    if (!resolvedAddressId) {
+      autoRedeemRequestRef.current = "";
+      return;
+    }
+
+    const requestKey = `${selectedAugmontProduct?.id || selectedAugmontProduct?.sku || "product"}:${uniqueId}:${resolvedAddressId}:${augmontRedeemForm.quantity}`;
+
+    if (autoRedeemRequestRef.current === requestKey) {
+      return;
+    }
+
+    autoRedeemRequestRef.current = requestKey;
+
+    window.setTimeout(() => {
+      autoRedeemRunnerRef.current?.(selectedAugmontProduct, resolvedAddressId);
+    }, 0);
+  }, [
+    selectedAugmontProduct,
+    onboardingReady,
+    redeemLoading,
+    augmontRedeemOrder,
+    augmontRedeemForm.quantity,
+    storedAugmontAddressId,
+    uniqueId
+  ]);
+
   const handleProductClick = (sku) => {
     if (!sku) return;
     navigate(`/products?sku=${encodeURIComponent(sku)}`);
@@ -311,13 +351,9 @@ export default function Products() {
         modeOfPayment: "UPI"
       });
       setCreatedAugmontUser(null);
-      setAugmontBuyOrder(null);
-      setAugmontBuyInvoice(null);
-      setAugmontSellOrder(null);
-      setAugmontSellInvoice(null);
-      setAugmontAddresses([]);
+        setAugmontRedeemOrder(null);
+        setRedeemError("");
       setAugmontBanks([]);
-      setAugmontKycProfile(null);
       setResolvedAugmontUniqueId(nextUniqueId);
       setOnboardingForm({
         userName:
@@ -359,37 +395,25 @@ export default function Products() {
         quantity: "0.0500",
         userBankId: ""
       });
+      autoRedeemRequestRef.current = "";
+      setAugmontRedeemForm({
+        quantity: "1",
+        userAddressId: storedAugmontAddressId,
+        modeOfPayment: "wallet"
+      });
       setSetupError("");
       setBuyError("");
-      setBuyInvoiceError("");
       setSellError("");
-      setSellInvoiceError("");
+
       return;
     }
 
-    const selectedProduct = {
-      source,
-      id: product?.skuNumber || product?.id || "",
-      name: product?.title || "Gold Product",
-      price: Number(product?.price ?? 0),
-      image: product?.image || "",
-      sku: product?.skuNumber || "",
-      description: product?.description || "",
-      metal: product?.metal || "",
-      purity: product?.purity || "",
-      weight: product?.weight ?? null,
-      brand: product?.brand || "",
-      dispatchTime: product?.dispatchTime || "",
-      certification: product?.certification || "",
-      raw: product
-    };
-
-    localStorage.setItem(PRODUCT_SELECTION_KEY, JSON.stringify(selectedProduct));
-    navigate("/portfolio?tab=buy", {
-      state: {
-        selectedProduct
-      }
-    });
+    setSelectedSafeGoldProduct(product);
+    setSafeGoldRedeemError("");
+    setSafeGoldRedeemResult(null);
+    window.setTimeout(() => {
+      handleVerifySafeGoldRedeem(product);
+    }, 0);
   };
 
   const handleCreateAugmontUser = async () => {
@@ -435,7 +459,6 @@ export default function Products() {
     setSetupError("");
     setCreatedAugmontUser(null);
     setAugmontAddresses([]);
-    setAugmontKycProfile(null);
 
     const nextUniqueId = uniqueId || buildGeneratedUniqueId();
     const userRequest = {
@@ -509,7 +532,8 @@ export default function Products() {
     const banksResponse = await fetchAugmontUserBanks(nextUniqueId, sessionMerchantId);
     const nextBanks = banksResponse?.ok ? banksResponse.banks || [] : [];
 
-    let nextKycProfile = null;
+    setAugmontAddresses(nextAddresses);
+
     if (onboardingForm.kycPayload.trim()) {
       let parsedKycPayload = null;
 
@@ -534,10 +558,6 @@ export default function Products() {
       }
     }
 
-    const kycProfileResponse = await fetchAugmontKycProfile(nextUniqueId, sessionMerchantId);
-    if (kycProfileResponse?.ok) {
-      nextKycProfile = kycProfileResponse.kycProfile || null;
-    }
 
     setSetupLoading(false);
     const profile = normalizeAugmontUserProfile(profileResponse.profile, nextUniqueId);
@@ -573,8 +593,6 @@ export default function Products() {
         "",
       kycStatus:
         profile.kycStatus ||
-        nextKycProfile?.kycStatus ||
-        nextKycProfile?.status ||
         "",
       stateName:
         profile.stateName ||
@@ -595,9 +613,7 @@ export default function Products() {
     };
 
     setCreatedAugmontUser(persistedProfile);
-    setAugmontAddresses(nextAddresses);
     setAugmontBanks(nextBanks);
-    setAugmontKycProfile(nextKycProfile);
     setResolvedAugmontUniqueId(persistedProfile.uniqueId);
     setAugmontSellForm((current) => ({
       ...current,
@@ -638,10 +654,6 @@ export default function Products() {
 
     setBuyLoading(true);
     setBuyError("");
-    setAugmontBuyOrder(null);
-    setAugmontBuyInvoice(null);
-    setAugmontSellOrder(null);
-    setAugmontSellInvoice(null);
 
     const response = await createAugmontBuyOrder({
       merchantId: sessionMerchantId,
@@ -660,8 +672,6 @@ export default function Products() {
       return;
     }
 
-    setAugmontBuyOrder(response.order || {});
-    setBuyInvoiceError("");
   };
 
   const handleCreateAugmontSellOrder = async () => {
@@ -684,10 +694,6 @@ export default function Products() {
 
     setSellLoading(true);
     setSellError("");
-    setAugmontSellOrder(null);
-    setAugmontBuyOrder(null);
-    setAugmontBuyInvoice(null);
-    setAugmontSellInvoice(null);
 
     const response = await createAugmontSellOrder({
       merchantId: sessionMerchantId,
@@ -706,62 +712,145 @@ export default function Products() {
       return;
     }
 
-    setAugmontSellOrder(response.order || {});
-    setSellInvoiceError("");
   };
 
-  const handleFetchAugmontBuyInvoice = async () => {
-    const transactionId = String(augmontBuyOrder?.transactionId || "").trim();
+  async function handleCreateAugmontRedeemOrder(productOverride = null, addressIdOverride = "") {
+    const activeProduct = productOverride || selectedAugmontProduct;
+    if (!activeProduct) return;
 
-    if (!transactionId) {
-      setBuyInvoiceError("Transaction ID is not available for invoice fetch.");
+    if (!uniqueId) {
+      setRedeemError("Complete Augmont user onboarding before placing the redeem order.");
       return;
     }
 
-    setBuyInvoiceLoading(true);
-    setBuyInvoiceError("");
+    if (!augmontRedeemForm.quantity) {
+      setRedeemError("Quantity is required.");
+      return;
+    }
 
-    const response = await fetchAugmontBuyInvoice({
+    const resolvedAddressId = String(
+      addressIdOverride ||
+        augmontRedeemForm.userAddressId ||
+        augmontUser?.userAddressId ||
+        appProfile?.augmontUserAddressId ||
+        ""
+    ).trim();
+
+    if (!resolvedAddressId) {
+      setRedeemError("Select a saved address before placing the redeem order.");
+      return;
+    }
+
+    const mobileNumber = String(
+      onboardingProfile?.mobileNumber || appProfile?.mobileNumber || ""
+    ).trim();
+
+    if (!mobileNumber) {
+      setRedeemError("Mobile number is required before placing the redeem order.");
+      return;
+    }
+
+    const redeemSku = String(
+      activeProduct?.sku || activeProduct?.id || ""
+    ).trim();
+
+    if (!redeemSku) {
+      setRedeemError("Selected Augmont product SKU is missing.");
+      return;
+    }
+
+    setRedeemLoading(true);
+    setRedeemError("");
+    setAugmontRedeemOrder(null);
+
+    const response = await createAugmontRedeemOrder({
       merchantId: sessionMerchantId,
-      transactionId
+      request: {
+        uniqueId,
+        mobileNumber,
+        addressId: resolvedAddressId,
+        products: [
+          {
+            sku: redeemSku,
+            quantity: augmontRedeemForm.quantity
+          }
+        ],
+        modeOfPayment: augmontRedeemForm.modeOfPayment
+      }
     });
 
-    setBuyInvoiceLoading(false);
+    setRedeemLoading(false);
 
     if (!response?.ok) {
-      setBuyInvoiceError(response?.message || "Unable to fetch buy invoice.");
-      setAugmontBuyInvoice(null);
+      setRedeemError(response?.message || "Unable to place Augmont redeem order");
       return;
     }
 
-    setAugmontBuyInvoice(response.invoice || {});
-  };
+    setAugmontRedeemOrder(response.order || {});
+  }
 
-  const handleFetchAugmontSellInvoice = async () => {
-    const transactionId = String(augmontSellOrder?.transactionId || "").trim();
+  useEffect(() => {
+    autoRedeemRunnerRef.current = handleCreateAugmontRedeemOrder;
+  });
 
-    if (!transactionId) {
-      setSellInvoiceError("Transaction ID is not available for invoice fetch.");
+
+
+  const handleVerifySafeGoldRedeem = async (product = selectedSafeGoldProduct) => {
+    if (!product) return;
+
+    const signupName = String(appProfile?.fullName || "").trim();
+    const signupPhone = String(appProfile?.mobileNumber || "").trim();
+    const signupState = String(appProfile?.augmontState || "").trim();
+    const signupCity = String(appProfile?.augmontCity || "").trim();
+    const signupPincode = String(appProfile?.pinCode || "").trim();
+    const signupAddress = String(appProfile?.augmontAddress || "").trim();
+    const signupLandmark = String(appProfile?.augmontLandmark || "").trim();
+
+    if (!appProfile?.partnerUserId) {
+      setSafeGoldRedeemError("SafeGold partner user mapping is missing for this account.");
       return;
     }
 
-    setSellInvoiceLoading(true);
-    setSellInvoiceError("");
+    const productCode = product?.raw?.id;
 
-    const response = await fetchAugmontSellInvoice({
-      merchantId: sessionMerchantId,
-      transactionId
+    if (!productCode) {
+      setSafeGoldRedeemError("Selected SafeGold product code is missing.");
+      return;
+    }
+
+    if (!signupName || !signupPhone || !signupState || !signupCity || !signupPincode || !signupAddress || !signupLandmark) {
+      setSafeGoldRedeemError("Signup details are incomplete. Name, phone, state, city, pincode, address, and landmark must already be available.");
+      return;
+    }
+
+    setSafeGoldRedeemLoading(true);
+    setSafeGoldRedeemError("");
+    setSafeGoldRedeemResult(null);
+
+    const response = await verifySafeGoldRedeem({
+      partnerUserId: appProfile.partnerUserId,
+      request: {
+        productCode: Number(productCode),
+        name: signupName,
+        phoneNo: signupPhone,
+        address: {
+          state: signupState,
+          city: signupCity,
+          pincode: signupPincode,
+          address: signupAddress,
+          landmark: signupLandmark
+        }
+      }
     });
 
-    setSellInvoiceLoading(false);
+    setSafeGoldRedeemLoading(false);
 
     if (!response?.ok) {
-      setSellInvoiceError(response?.message || "Unable to fetch sell invoice.");
-      setAugmontSellInvoice(null);
+      setSafeGoldRedeemError(response?.message || "SafeGold redeem verification failed.");
       return;
     }
 
-    setAugmontSellInvoice(response.invoice || {});
+    setSafeGoldRedeemResult(response.verified || {});
   };
 
   const unifiedProducts = [
@@ -887,25 +976,25 @@ export default function Products() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs uppercase tracking-[0.24em] text-yellow-300">
-                  Augmont User Onboarding
+                  Augmont Product Redeem
                 </p>
                 <h3 className="mt-2 text-2xl font-semibold text-white">
                   {selectedAugmontProduct.name}
                 </h3>
                 <p className="mt-2 text-sm text-white/55">
-                  Complete the wrapper onboarding flow here. The frontend stays on app auth for login, then uses goldplatform wrapper APIs only for Augmont user, bank, address, and KYC profile setup.
+                  This product flow now focuses on Augmont redeem create. If onboarding is already complete, the product Buy button directly triggers redeem create using the saved address and stored user details.
                 </p>
               </div>
 
               <button
                 onClick={() => {
+                  autoRedeemRequestRef.current = "";
                   setSelectedAugmontProduct(null);
                   setCreatedAugmontUser(null);
-                  setAugmontBuyOrder(null);
-                  setAugmontAddresses([]);
-                  setAugmontKycProfile(null);
-                  setSetupError("");
+                  setAugmontRedeemOrder(null);
+                              setSetupError("");
                   setBuyError("");
+                  setRedeemError("");
                 }}
                 className="rounded-xl border border-white/10 px-4 py-2 text-sm text-white/70 transition hover:border-red-500/30 hover:text-red-200"
               >
@@ -1148,7 +1237,7 @@ export default function Products() {
                   </div>
                 </div>
 
-                {onboardingReady ? (
+                {showLegacyTradeActions && onboardingReady ? (
                   <div className="rounded-2xl border border-yellow-500/20 bg-yellow-500/5 p-4">
                     <p className="text-sm font-semibold text-yellow-200">
                       Buy order create is now available
@@ -1209,8 +1298,39 @@ export default function Products() {
                     </button>
                   </div>
                 ) : null}
-
                 {onboardingReady ? (
+                  <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4">
+                    <p className="text-sm font-semibold text-rose-200">
+                      Augmont Buy now triggers redeem automatically
+                    </p>
+                    <p className="mt-2 text-xs text-white/60">
+                      No second button is needed here. The product Buy click calls `orders/redeem/create` automatically using your stored `uniqueId`, the signup-saved address id, selected product SKU, and wrapper-managed mobile number.
+                    </p>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Quantity</p>
+                        <p className="mt-1 text-sm font-medium text-white">
+                          {augmontRedeemForm.quantity || "1"}
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-[#111] p-3">
+                        <p className="text-xs text-white/45">Saved address id</p>
+                        <p className="mt-1 break-all text-sm font-medium text-white">
+                          {storedAugmontAddressId || "Not available"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {!storedAugmontAddressId ? (
+                      <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                        Complete address setup during signup first. Redeem create uses that saved address id directly.
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {showLegacyTradeActions && onboardingReady ? (
                   <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4">
                     <p className="text-sm font-semibold text-emerald-200">
                       Augmont sell order create is now available
@@ -1291,7 +1411,7 @@ export default function Products() {
 
                 <button
                   onClick={handleCreateAugmontUser}
-                  disabled={setupLoading || buyLoading || sellLoading}
+                  disabled={setupLoading || buyLoading || redeemLoading || sellLoading}
                   className="w-full rounded-xl bg-yellow-500 py-3 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {setupLoading
@@ -1303,365 +1423,159 @@ export default function Products() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
-                <p className="text-sm font-semibold text-white">
-                  {augmontSellOrder
-                    ? "Augmont Sell Order Success"
-                    : augmontBuyOrder
-                      ? "Buy Order Success"
-                      : "Created User Profile"}
-                </p>
+                <p className="text-sm font-semibold text-white">Augmont Redeem Order Response</p>
                 <p className="mt-2 text-xs text-white/50">
-                  {augmontSellOrder
-                    ? "On success, the UI uses `payload.result.data` from the sell-order create response."
-                    : augmontBuyOrder
-                    ? "On success, the UI uses `payload.result.data` from the buy-order create response."
-                    : "On success, the UI uses `payload.result.data` from the user-create response and stores the returned identifiers for later Augmont flows."}
+                  This product flow shows only the Augmont redeem-create result or the exact prerequisite blocking redeem.
                 </p>
 
                 {!onboardingReady ? (
                   <div className="mt-6 rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/45">
-                    Complete the wrapper onboarding form to see Augmont profile, KYC, and address data here.
+                    Complete Augmont onboarding first. This product flow uses redeem create only.
                   </div>
-                ) : augmontSellOrder ? (
+                ) : redeemLoading ? (
+                  <div className="mt-6 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6 text-sm text-yellow-100">
+                    Creating Augmont redeem order...
+                  </div>
+                ) : redeemError ? (
+                  <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                    {redeemError}
+                  </div>
+                ) : augmontRedeemOrder ? (
                   <div className="mt-6 space-y-3">
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Sold quantity</p>
+                        <p className="text-xs text-white/45">Redeem quantity</p>
                         <p className="mt-1 text-sm font-medium text-white">
-                          {augmontSellOrder.quantity || "NA"}
+                          {augmontRedeemOrder.quantity || augmontRedeemForm.quantity || "NA"}
                         </p>
                       </div>
                       <div className="rounded-xl bg-[#111] p-3">
                         <p className="text-xs text-white/45">Total amount</p>
                         <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontSellOrder.totalAmount)}
+                          Rs {formatPrice(augmontRedeemOrder.totalAmount)}
                         </p>
                       </div>
                       <div className="rounded-xl bg-[#111] p-3">
                         <p className="text-xs text-white/45">Pre-tax amount</p>
                         <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontSellOrder.preTaxAmount)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Rate</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontSellOrder.rate)}
+                          Rs {formatPrice(augmontRedeemOrder.preTaxAmount)}
                         </p>
                       </div>
                       <div className="rounded-xl bg-[#111] p-3">
                         <p className="text-xs text-white/45">Transaction ID</p>
                         <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontSellOrder.transactionId || "NA"}
+                          {augmontRedeemOrder.transactionId || "NA"}
                         </p>
                       </div>
                       <div className="rounded-xl bg-[#111] p-3">
                         <p className="text-xs text-white/45">Merchant transaction ID</p>
                         <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontSellOrder.merchantTransactionId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Reference type</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontSellOrder.referenceType || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Reference ID</p>
-                        <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontSellOrder.referenceId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Updated gold balance</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontSellOrder.goldBalance ?? "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Updated silver balance</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontSellOrder.silverBalance ?? "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Seller</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontSellOrder.userName || "NA"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-200">
-                            Sell Invoice
-                          </p>
-                          <p className="mt-1 text-xs text-white/60">
-                            This uses the `transactionId` returned by `orders/sell/create` internally. The user does not need to enter it.
-                          </p>
-                        </div>
-                        <button
-                          onClick={handleFetchAugmontSellInvoice}
-                          disabled={sellInvoiceLoading}
-                          className="rounded-xl bg-emerald-400 px-5 py-2 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {sellInvoiceLoading ? "Fetching Invoice..." : "Fetch Sell Invoice"}
-                        </button>
-                      </div>
-
-                      {sellInvoiceError ? (
-                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
-                          {sellInvoiceError}
-                        </div>
-                      ) : null}
-
-                      {augmontSellInvoice ? (
-                        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs uppercase tracking-wide text-white/50">
-                            Invoice Response
-                          </p>
-                          <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/70">
-                            {JSON.stringify(augmontSellInvoice, null, 2)}
-                          </pre>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : augmontBuyOrder ? (
-                  <div className="mt-6 space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Bought quantity</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.quantity || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Total amount</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontBuyOrder.totalAmount)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Pre-tax amount</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontBuyOrder.preTaxAmount)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Rate</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          Rs {formatPrice(augmontBuyOrder.rate)}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Transaction ID</p>
-                        <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontBuyOrder.transactionId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Invoice number</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.invoiceNumber || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Reference type</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.referenceType || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Reference ID</p>
-                        <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontBuyOrder.referenceId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Merchant transaction ID</p>
-                        <p className="mt-1 break-all text-sm font-medium text-white">
-                          {augmontBuyOrder.merchantTransactionId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Updated gold balance</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.goldBalance ?? "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Updated silver balance</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.silverBalance ?? "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Buyer</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {augmontBuyOrder.userName || "NA"}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                      <p className="text-sm font-semibold text-cyan-200">Tax Breakdown</p>
-                      <p className="mt-2 text-sm text-white/75">
-                        Total tax amount: Rs {formatPrice(augmontBuyOrder?.taxes?.totalTaxAmount)}
-                      </p>
-                      <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/60">
-                        {JSON.stringify(augmontBuyOrder?.taxes?.taxSplit || {}, null, 2)}
-                      </pre>
-                    </div>
-
-                    <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-emerald-200">
-                            Buy Invoice
-                          </p>
-                          <p className="mt-1 text-xs text-white/60">
-                            This uses the `transactionId` returned by `orders/buy/create` internally. The user does not need to enter it.
-                          </p>
-                        </div>
-                        <button
-                          onClick={handleFetchAugmontBuyInvoice}
-                          disabled={buyInvoiceLoading}
-                          className="rounded-xl bg-emerald-400 px-5 py-2 font-semibold text-black transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {buyInvoiceLoading ? "Fetching Invoice..." : "Fetch Buy Invoice"}
-                        </button>
-                      </div>
-
-                      {buyInvoiceError ? (
-                        <div className="mt-4 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
-                          {buyInvoiceError}
-                        </div>
-                      ) : null}
-
-                      {augmontBuyInvoice ? (
-                        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
-                          <p className="text-xs uppercase tracking-wide text-white/50">
-                            Invoice Response
-                          </p>
-                          <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/70">
-                            {JSON.stringify(augmontBuyInvoice, null, 2)}
-                          </pre>
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-6 space-y-3">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">User name</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.userName || "NA"}
+                          {augmontRedeemOrder.merchantTransactionId || "NA"}
                         </p>
                       </div>
                       <div className="rounded-xl bg-[#111] p-3">
                         <p className="text-xs text-white/45">Unique ID</p>
                         <p className="mt-1 break-all text-sm font-medium text-white">
-                          {onboardingProfile?.uniqueId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Customer mapped ID</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.customerMappedId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Mobile number</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.mobileNumber || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Email</p>
-                        <p className="mt-1 break-all text-sm font-medium text-white">
-                          {onboardingProfile?.userEmail || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">KYC status</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.kycStatus || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">State</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.stateName || onboardingProfile?.userState || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">City</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.cityName || onboardingProfile?.userCity || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">State ID</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.userStateId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">City ID</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.userCityId || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Pincode</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.userPincode || "NA"}
-                        </p>
-                      </div>
-                      <div className="rounded-xl bg-[#111] p-3">
-                        <p className="text-xs text-white/45">Created at</p>
-                        <p className="mt-1 text-sm font-medium text-white">
-                          {onboardingProfile?.createdAt || "NA"}
+                          {augmontRedeemOrder.uniqueId || uniqueId || "NA"}
                         </p>
                       </div>
                     </div>
 
-                    <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-4">
-                      <p className="text-sm font-semibold text-cyan-200">What is done</p>
-                      <p className="mt-2 text-sm text-white/75">
-                        The frontend has created the Augmont user, fetched the linked profile, created the bank record, created an address, fetched saved addresses, and loaded the KYC profile using wrapper APIs only.
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-white/10 bg-[#111] p-4">
-                      <p className="text-sm font-semibold text-white">Saved addresses</p>
-                      <div className="mt-3 space-y-2 text-sm text-white/70">
-                        {augmontAddresses.length === 0 ? (
-                          <p>No saved addresses returned yet.</p>
-                        ) : (
-                          augmontAddresses.map((address, index) => (
-                            <div key={`${address?.id || address?.addressId || index}`} className="rounded-lg border border-white/10 p-3">
-                              <p>{address?.address || address?.fullAddress || "Saved address"}</p>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl border border-white/10 bg-[#111] p-4">
-                      <p className="text-sm font-semibold text-white">KYC profile</p>
-                      <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/60">
-                        {JSON.stringify(augmontKycProfile || {}, null, 2)}
+                    <div className="rounded-xl border border-rose-500/20 bg-rose-500/5 p-4">
+                      <p className="text-sm font-semibold text-rose-200">Redeem Create Response</p>
+                      <pre className="mt-3 overflow-auto whitespace-pre-wrap break-words text-xs text-white/70">
+                        {JSON.stringify(augmontRedeemOrder, null, 2)}
                       </pre>
                     </div>
                   </div>
+                ) : (
+                  <div className="mt-6 rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/45">
+                    Waiting for Augmont redeem response.
+                  </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {selectedSafeGoldProduct ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-8">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-auto rounded-3xl border border-white/10 bg-[#0f0f0f] p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.24em] text-yellow-300">
+                  SafeGold Redeem Verify
+                </p>
+                <h3 className="mt-2 text-2xl font-semibold text-white">
+                  {selectedSafeGoldProduct.title}
+                </h3>
+                <p className="mt-2 text-sm text-white/55">
+                  The Buy button uses your stored signup details and directly calls `/api/v1/gold/redeem/verify` for this product.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedSafeGoldProduct(null);
+                  setSafeGoldRedeemError("");
+                  setSafeGoldRedeemResult(null);
+                }}
+                className="rounded-full border border-white/10 px-3 py-1 text-sm text-white/70 transition hover:border-yellow-400 hover:text-yellow-300"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="text-sm font-semibold text-white">Redeem Verify Response</p>
+              <p className="mt-2 text-xs text-white/50">
+                No extra form is shown here. The request was built from the details saved during signup.
+              </p>
+
+              {safeGoldRedeemLoading ? (
+                <div className="mt-6 rounded-xl border border-yellow-500/20 bg-yellow-500/5 p-6 text-sm text-yellow-100">
+                  Verifying redeem details for this SafeGold product...
+                </div>
+              ) : null}
+
+              {safeGoldRedeemError ? (
+                <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-red-200">
+                  {safeGoldRedeemError}
+                </div>
+              ) : null}
+
+              {!safeGoldRedeemLoading && !safeGoldRedeemError && !safeGoldRedeemResult ? (
+                <div className="mt-6 rounded-xl border border-dashed border-white/10 p-6 text-sm text-white/45">
+                  Waiting for redeem verification response.
+                </div>
+              ) : null}
+
+              {safeGoldRedeemResult ? (
+                <div className="mt-6 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-[#111] p-3">
+                      <p className="text-xs text-white/45">Price</p>
+                      <p className="mt-1 text-sm font-medium text-white">
+                        Rs {formatPrice(safeGoldRedeemResult.price || safeGoldRedeemResult.amount)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-[#111] p-3">
+                      <p className="text-xs text-white/45">Estimated dispatch</p>
+                      <p className="mt-1 text-sm font-medium text-white">
+                        {safeGoldRedeemResult.estimatedDispatch || "NA"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-[#111] p-3 sm:col-span-2">
+                      <p className="text-xs text-white/45">Transaction ID</p>
+                      <p className="mt-1 break-all text-sm font-medium text-white">
+                        {safeGoldRedeemResult.txId || "NA"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

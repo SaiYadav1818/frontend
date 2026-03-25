@@ -132,6 +132,9 @@ export const setUserProfile = ({
   augmontCityId = "",
   augmontState = "",
   augmontCity = "",
+  augmontAddress = "",
+  augmontLandmark = "",
+  augmontUserAddressId = "",
   augmontKycStatus = "",
   augmontCreatedAt = ""
 } = {}) => {
@@ -159,6 +162,12 @@ export const setUserProfile = ({
       String(augmontState || "").trim() || existingProfile?.augmontState || "",
     augmontCity:
       String(augmontCity || "").trim() || existingProfile?.augmontCity || "",
+    augmontAddress:
+      String(augmontAddress || "").trim() || existingProfile?.augmontAddress || "",
+    augmontLandmark:
+      String(augmontLandmark || "").trim() || existingProfile?.augmontLandmark || "",
+    augmontUserAddressId:
+      String(augmontUserAddressId || "").trim() || existingProfile?.augmontUserAddressId || "",
     augmontKycStatus:
       String(augmontKycStatus || "").trim() ||
       existingProfile?.augmontKycStatus ||
