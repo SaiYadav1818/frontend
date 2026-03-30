@@ -523,16 +523,14 @@ function GoldPriceWidget() {
                     <h3 className="mt-2 text-2xl font-semibold text-white">
                       {metalType === "gold" ? "Gold" : "Silver"} buy and sell view
                     </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
-                      Rates pulled from <code>/api/v1/rates/live</code> for the selected metal.
-                    </p>
+                   
                   </div>
                   <span className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/55">
                     Live
                   </span>
                 </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {liveRateCards.map((card, i) => (
                     <Motion.div
                       key={card.title}
@@ -543,13 +541,15 @@ function GoldPriceWidget() {
                       className="rounded-2xl border border-white/10 bg-black/25 p-5 transition-all hover:border-yellow-500/30"
                     >
                       <p className="mb-2 text-sm text-gray-400">{card.title}</p>
-                      <div className="flex items-end justify-between gap-4">
-                        <h4 className="text-3xl font-bold lg:text-4xl">
+                      <div className="flex min-h-[108px] flex-col justify-between gap-3">
+                        <h4 className="min-w-0 break-words text-[1.25rem] font-bold leading-tight lg:text-[1.4rem] xl:text-[1.55rem]">
                           {card.price}
-                          <span className="ml-1 text-lg text-gray-400">{card.sub}</span>
+                          <span className="mt-2 block text-sm font-medium text-gray-400 lg:text-[0.95rem]">
+                            {card.sub}
+                          </span>
                         </h4>
                         {card.extra ? (
-                          <span className={`text-sm ${card.color || "text-gray-400"}`}>
+                          <span className={`text-sm font-medium ${card.color || "text-gray-400"}`}>
                             {card.extra}
                           </span>
                         ) : null}
@@ -608,6 +608,7 @@ function GoldPriceWidget() {
                         {formatCurrency(selectedLiveRates.buyPrice || 0)}
                       </p>
                     </div>
+<<<<<<< HEAD
                   </div>
                 </div>
 
@@ -690,6 +691,90 @@ function GoldPriceWidget() {
                     </button>
                   ))}
                 </div>
+=======
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
+                      <p className="mt-1 text-sm text-white/70">
+                        Sell uses the stored profile and bank context from the backend.
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-white/10 bg-[#111] px-4 py-2 text-sm text-white/65">
+                      {formatCurrency(selectedLiveRates.sellPrice || 0)} / unit
+                    </div>
+                  </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                    <p className="text-xs uppercase tracking-[0.22em] text-white/45">Quantity</p>
+                    <input
+                      value={sellQuantity}
+                        onChange={(event) => setSellQuantity(event.target.value)}
+                        placeholder="0.0500"
+                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
+                      <p className="mt-3 text-2xl font-semibold text-white">
+                        {formatCurrency(selectedLiveRates.sellPrice || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                {showSellDetails ? (
+                  <div className="mt-4 grid gap-4 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Name</p>
+                      <input
+                        value={sellAccountName}
+                        onChange={(event) => setSellAccountName(event.target.value)}
+                        placeholder="Enter account name"
+                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Number</p>
+                      <input
+                        value={sellAccountNumber}
+                        onChange={(event) => setSellAccountNumber(event.target.value.replace(/\D/g, ""))}
+                        placeholder="Enter account number"
+                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                      />
+                    </div>
+
+                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">IFSC Code</p>
+                      <input
+                        value={sellIfscCode}
+                        onChange={(event) => setSellIfscCode(event.target.value.toUpperCase())}
+                        placeholder="Enter IFSC code"
+                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                </div>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {actionButtons.map((label) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={label === "Buy" ? handleBuyOrder : handleSellAction}
+                      className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                    >
+                      {label === "Sell" && !showSellDetails ? "Sell" : label === "Sell" ? "Confirm Sell" : label}
+                    </button>
+                  ))}
+                </div>
+>>>>>>> dfdf7f093a7d7b89201af8be3b528f2eea383798
               </Motion.div>
 
               <Motion.div
@@ -706,9 +791,7 @@ function GoldPriceWidget() {
                     <h3 className="mt-2 text-2xl font-semibold text-white">
                       Regular accumulation view
                     </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
-                      Rates pulled from <code>/api/v1/rates/sip</code> and shown separately from live pricing.
-                    </p>
+                    
                   </div>
                   <span className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/55">
                     SIP
@@ -726,13 +809,15 @@ function GoldPriceWidget() {
                       className="rounded-2xl border border-white/10 bg-black/25 p-5 transition-all hover:border-yellow-500/30"
                     >
                       <p className="mb-2 text-sm text-gray-400">{card.title}</p>
-                      <div className="flex items-end justify-between gap-4">
-                        <h4 className="text-3xl font-bold lg:text-4xl">
+                      <div className="flex min-h-[108px] flex-col justify-between gap-3">
+                        <h4 className="min-w-0 break-words text-[1.25rem] font-bold leading-tight lg:text-[1.4rem] xl:text-[1.55rem]">
                           {card.price}
-                          <span className="ml-1 text-lg text-gray-400">{card.sub}</span>
+                          <span className="mt-2 block text-sm font-medium text-gray-400 lg:text-[0.95rem]">
+                            {card.sub}
+                          </span>
                         </h4>
                         {card.extra ? (
-                          <span className="text-sm text-gray-400">{card.extra}</span>
+                          <span className="text-sm font-medium text-gray-400">{card.extra}</span>
                         ) : null}
                       </div>
                     </Motion.div>
