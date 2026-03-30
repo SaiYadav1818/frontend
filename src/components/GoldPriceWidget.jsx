@@ -88,7 +88,9 @@ function GoldPriceWidget() {
   const [sellInvoiceLoading, setSellInvoiceLoading] = useState(false);
   const [sellInvoiceError, setSellInvoiceError] = useState("");
   const [sellInvoiceResult, setSellInvoiceResult] = useState({});
-  const [showSellDetails, setShowSellDetails] = useState(false);
+  const [activeLiveAction, setActiveLiveAction] = useState("");
+  const [activeSipAction, setActiveSipAction] = useState("");
+  const [activeInvoiceModal, setActiveInvoiceModal] = useState(null);
 
   const loadRates = useCallback(async () => {
     setIsLoading(true);
@@ -183,6 +185,7 @@ function GoldPriceWidget() {
     setBuyInvoiceResult({});
     setBuyInvoiceError("");
     setBuyTransactionId("");
+    setActiveInvoiceModal(null);
 
     const profile = getUserProfile() || {};
     const augmontUser = getAugmontUser() || {};
@@ -281,7 +284,12 @@ function GoldPriceWidget() {
       return;
     }
 
-    setBuyInvoiceResult(response.invoice || {});
+    const invoice = response.invoice || {};
+    setBuyInvoiceResult(invoice);
+    setActiveInvoiceModal({
+      type: "buy",
+      data: invoice
+    });
   };
 
   const handleSellOrder = async () => {
@@ -292,6 +300,7 @@ function GoldPriceWidget() {
     setSellInvoiceResult({});
     setSellInvoiceError("");
     setSellTransactionId("");
+    setActiveInvoiceModal(null);
 
     const profile = getUserProfile() || {};
     const augmontUser = getAugmontUser() || {};
@@ -366,15 +375,6 @@ function GoldPriceWidget() {
     setSellTransactionId(transactionId);
   };
 
-  const handleSellAction = () => {
-    if (!showSellDetails) {
-      setShowSellDetails(true);
-      return;
-    }
-
-    void handleSellOrder();
-  };
-
   const handleSellInvoice = async () => {
     setSellInvoiceLoading(true);
     setSellInvoiceError("");
@@ -398,7 +398,12 @@ function GoldPriceWidget() {
       return;
     }
 
-    setSellInvoiceResult(response.invoice || {});
+    const invoice = response.invoice || {};
+    setSellInvoiceResult(invoice);
+    setActiveInvoiceModal({
+      type: "sell",
+      data: invoice
+    });
   };
 
   const liveRateCards = [
@@ -437,6 +442,156 @@ function GoldPriceWidget() {
   ];
 
   const actionButtons = ["Buy", "Sell"];
+
+  const renderInvoicePanel = (invoiceResult, invoiceType) => {
+    if (!invoiceResult || Object.keys(invoiceResult).length === 0) {
+      return null;
+    }
+
+    const invoiceFields = [
+      ["Name", invoiceResult?.userInfo?.name],
+      ["Address", invoiceResult?.userInfo?.address],
+      ["City", invoiceResult?.userInfo?.city],
+      ["State", invoiceResult?.userInfo?.state],
+      ["Pincode", invoiceResult?.userInfo?.pincode],
+      ["Email", invoiceResult?.userInfo?.email],
+      ["Mobile Number", invoiceResult?.userInfo?.mobileNumber],
+      ["Unique ID", invoiceResult?.userInfo?.uniqueId],
+      ["Transaction ID", invoiceResult?.transactionId]
+    ];
+
+    const purchaseFields = [
+      ["Quantity", invoiceResult?.quantity],
+      ["Metal Type", invoiceResult?.metalType],
+      ["HSN Code", invoiceResult?.hsnCode],
+      ["Rate", invoiceResult?.rate],
+      ["Unit Type", invoiceResult?.unitType],
+      ["Gross Amount", invoiceResult?.grossAmount],
+      ["Net Amount", invoiceResult?.netAmount]
+    ];
+
+    return (
+      <div className="w-full max-w-5xl overflow-hidden rounded-[2rem] border border-yellow-500/15 bg-[linear-gradient(180deg,rgba(26,22,12,0.98),rgba(9,9,9,0.98))] shadow-[0_24px_80px_rgba(0,0,0,0.35)]">
+        <div className="border-b border-white/10 bg-[linear-gradient(90deg,rgba(250,204,21,0.12),rgba(255,255,255,0.02))] px-6 py-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-yellow-300/90">
+                {invoiceType === "sell" ? "Sell Invoice" : "Buy Invoice"}
+              </p>
+              <h4 className="mt-3 text-2xl font-semibold tracking-tight text-white">
+                {String(invoiceResult?.invoiceNumber || "Invoice fetched successfully")}
+              </h4>
+            </div>
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-right">
+                <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Date</p>
+                <p className="mt-2 text-sm font-medium text-white/80">
+                  {String(invoiceResult?.invoiceDate || "-")}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveInvoiceModal(null)}
+                className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm font-medium text-white/70 transition hover:border-yellow-500/30 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-6 p-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Customer</p>
+              <p className="mt-3 text-lg font-semibold text-white">
+                {String(invoiceResult?.userInfo?.name || "-")}
+              </p>
+              <p className="mt-2 text-sm text-white/60">
+                {String(invoiceResult?.userInfo?.mobileNumber || "-")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Transaction</p>
+              <p className="mt-3 break-words text-sm font-medium text-white">
+                {String(invoiceResult?.transactionId || "-")}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+              <p className="text-[11px] uppercase tracking-[0.24em] text-white/45">Net Amount</p>
+              <p className="mt-3 text-2xl font-semibold text-yellow-300">
+                {String(invoiceResult?.netAmount || "-")}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-yellow-300/85">Customer Details</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {invoiceFields.map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">{label}</p>
+                  <p className="mt-2 break-words text-sm text-white">{String(value || "-")}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-yellow-300/85">Purchase Details</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {purchaseFields.map(([label, value]) => (
+                <div key={label} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">{label}</p>
+                  <p className="mt-2 break-words text-sm font-medium text-white">{String(value || "-")}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {Array.isArray(invoiceResult?.taxes?.taxSplit) ? (
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-yellow-300/85">Taxes</p>
+              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-yellow-500/15 bg-yellow-500/5 p-4">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">Total Tax Amount</p>
+                  <p className="mt-2 text-lg font-semibold text-white">
+                    {String(invoiceResult?.taxes?.totalTaxAmount || "-")}
+                  </p>
+                </div>
+                {invoiceResult.taxes.taxSplit.map((tax, index) => (
+                  <div
+                    key={`${tax?.type || "tax"}-${index}`}
+                    className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4"
+                  >
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-white/45">
+                      {String(tax?.type || `Tax ${index + 1}`)}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold text-white">
+                      {String(tax?.taxAmount || "-")}
+                    </p>
+                    <p className="mt-1 text-xs text-white/45">
+                      {String(tax?.taxPerc || "-")}%
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="flex justify-end border-t border-white/10 pt-2">
+            <button
+              type="button"
+              onClick={() => setActiveInvoiceModal(null)}
+              className="rounded-full bg-yellow-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:brightness-110"
+            >
+              Close Invoice
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <section className="bg-black py-10 text-white">
@@ -558,138 +713,162 @@ function GoldPriceWidget() {
                   ))}
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Buy mode</p>
-                      <p className="mt-1 text-sm text-white/70">Choose quantity or amount, not both.</p>
-                    </div>
-                    <div className="flex rounded-full border border-white/10 bg-[#111] p-1">
-                      {["quantity", "amount"].map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          onClick={() => setBuyTradeMode(mode)}
-                          className={`rounded-full px-4 py-2 text-sm font-medium transition ${
-                            buyTradeMode === mode
-                              ? "bg-yellow-500 text-black"
-                              : "text-white/65 hover:text-white"
-                          }`}
-                        >
-                          {mode === "quantity" ? "Quantity" : "Amount"}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">
-                        {buyTradeMode === "quantity" ? "Quantity" : "Amount"}
-                      </p>
-                      <input
-                        value={buyTradeMode === "quantity" ? buyQuantity : buyAmount}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          if (buyTradeMode === "quantity") {
-                            setBuyQuantity(value);
-                          } else {
-                            setBuyAmount(value);
-                          }
-                        }}
-                        placeholder={buyTradeMode === "quantity" ? "0.1000" : "1000.00"}
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
-                      />
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
-                      <p className="mt-3 text-2xl font-semibold text-white">
-                        {formatCurrency(selectedLiveRates.buyPrice || 0)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
-                      <p className="mt-1 text-sm text-white/70">
-                        Sell uses the stored profile and bank context from the backend.
-                      </p>
-                    </div>
-                    <div className="rounded-full border border-white/10 bg-[#111] px-4 py-2 text-sm text-white/65">
-                      {formatCurrency(selectedLiveRates.sellPrice || 0)} / unit
-                    </div>
-                  </div>
-
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                    <p className="text-xs uppercase tracking-[0.22em] text-white/45">Quantity</p>
-                    <input
-                      value={sellQuantity}
-                        onChange={(event) => setSellQuantity(event.target.value)}
-                        placeholder="0.0500"
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
-                      />
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
-                      <p className="mt-3 text-2xl font-semibold text-white">
-                        {formatCurrency(selectedLiveRates.sellPrice || 0)}
-                      </p>
-                    </div>
-                  </div>
-
-                {showSellDetails ? (
-                  <div className="mt-4 grid gap-4 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Name</p>
-                      <input
-                        value={sellAccountName}
-                        onChange={(event) => setSellAccountName(event.target.value)}
-                        placeholder="Enter account name"
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
-                      />
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Number</p>
-                      <input
-                        value={sellAccountNumber}
-                        onChange={(event) => setSellAccountNumber(event.target.value.replace(/\D/g, ""))}
-                        placeholder="Enter account number"
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
-                      />
-                    </div>
-
-                    <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">IFSC Code</p>
-                      <input
-                        value={sellIfscCode}
-                        onChange={(event) => setSellIfscCode(event.target.value.toUpperCase())}
-                        placeholder="Enter IFSC code"
-                        className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-                </div>
-
                 <div className="mt-6 flex flex-wrap gap-3">
                   {actionButtons.map((label) => (
                     <button
                       key={label}
                       type="button"
-                      onClick={label === "Buy" ? handleBuyOrder : handleSellAction}
-                      className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      onClick={() => setActiveLiveAction(label.toLowerCase())}
+                      className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                        activeLiveAction === label.toLowerCase()
+                          ? "bg-yellow-500 text-black"
+                          : "border border-yellow-500/35 text-yellow-200 hover:bg-yellow-500 hover:text-black"
+                      }`}
                     >
-                      {label === "Sell" && !showSellDetails ? "Sell" : label === "Sell" ? "Confirm Sell" : label}
+                      {label}
                     </button>
                   ))}
                 </div>
+
+                {activeLiveAction === "buy" ? (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Buy mode</p>
+                        <p className="mt-1 text-sm text-white/70">Choose quantity or amount, not both.</p>
+                      </div>
+                      <div className="flex rounded-full border border-white/10 bg-[#111] p-1">
+                        {["quantity", "amount"].map((mode) => (
+                          <button
+                            key={mode}
+                            type="button"
+                            onClick={() => setBuyTradeMode(mode)}
+                            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                              buyTradeMode === mode
+                                ? "bg-yellow-500 text-black"
+                                : "text-white/65 hover:text-white"
+                            }`}
+                          >
+                            {mode === "quantity" ? "Quantity" : "Amount"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">
+                          {buyTradeMode === "quantity" ? "Quantity" : "Amount"}
+                        </p>
+                        <input
+                          value={buyTradeMode === "quantity" ? buyQuantity : buyAmount}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (buyTradeMode === "quantity") {
+                              setBuyQuantity(value);
+                            } else {
+                              setBuyAmount(value);
+                            }
+                          }}
+                          placeholder={buyTradeMode === "quantity" ? "0.1000" : "1000.00"}
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
+                        <p className="mt-3 text-2xl font-semibold text-white">
+                          {formatCurrency(selectedLiveRates.buyPrice || 0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleBuyOrder}
+                        className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      >
+                        Continue Buy
+                      </button>
+                    </div>
+                  </div>
+                ) : activeLiveAction === "sell" ? (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
+                        <p className="mt-1 text-sm text-white/70">
+                          Sell uses the stored profile and bank context from the backend.
+                        </p>
+                      </div>
+                      <div className="rounded-full border border-white/10 bg-[#111] px-4 py-2 text-sm text-white/65">
+                        {formatCurrency(selectedLiveRates.sellPrice || 0)} / unit
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Quantity</p>
+                        <input
+                          value={sellQuantity}
+                          onChange={(event) => setSellQuantity(event.target.value)}
+                          placeholder="0.0500"
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
+                        <p className="mt-3 text-2xl font-semibold text-white">
+                          {formatCurrency(selectedLiveRates.sellPrice || 0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-3">
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Name</p>
+                        <input
+                          value={sellAccountName}
+                          onChange={(event) => setSellAccountName(event.target.value)}
+                          placeholder="Enter account name"
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Account Number</p>
+                        <input
+                          value={sellAccountNumber}
+                          onChange={(event) => setSellAccountNumber(event.target.value.replace(/\D/g, ""))}
+                          placeholder="Enter account number"
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">IFSC Code</p>
+                        <input
+                          value={sellIfscCode}
+                          onChange={(event) => setSellIfscCode(event.target.value.toUpperCase())}
+                          placeholder="Enter IFSC code"
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleSellOrder}
+                        className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      >
+                        Continue Sell
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </Motion.div>
 
               <Motion.div
@@ -744,13 +923,129 @@ function GoldPriceWidget() {
                     <button
                       key={`${label}-sip`}
                       type="button"
-                      onClick={label === "Buy" ? handleBuyOrder : handleSellAction}
-                      className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      onClick={() => setActiveSipAction(label.toLowerCase())}
+                      className={`rounded-full px-5 py-2.5 text-sm font-semibold transition ${
+                        activeSipAction === label.toLowerCase()
+                          ? "bg-yellow-500 text-black"
+                          : "border border-yellow-500/35 text-yellow-200 hover:bg-yellow-500 hover:text-black"
+                      }`}
                     >
-                      {label === "Sell" && !showSellDetails ? "Sell" : label === "Sell" ? "Confirm Sell" : label}
+                      {label}
                     </button>
                   ))}
                 </div>
+
+                {activeSipAction === "buy" ? (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Buy mode</p>
+                        <p className="mt-1 text-sm text-white/70">Choose quantity or amount, not both.</p>
+                      </div>
+                      <div className="flex rounded-full border border-white/10 bg-[#111] p-1">
+                        {["quantity", "amount"].map((mode) => (
+                          <button
+                            key={`sip-${mode}`}
+                            type="button"
+                            onClick={() => setBuyTradeMode(mode)}
+                            className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                              buyTradeMode === mode
+                                ? "bg-yellow-500 text-black"
+                                : "text-white/65 hover:text-white"
+                            }`}
+                          >
+                            {mode === "quantity" ? "Quantity" : "Amount"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">
+                          {buyTradeMode === "quantity" ? "Quantity" : "Amount"}
+                        </p>
+                        <input
+                          value={buyTradeMode === "quantity" ? buyQuantity : buyAmount}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (buyTradeMode === "quantity") {
+                              setBuyQuantity(value);
+                            } else {
+                              setBuyAmount(value);
+                            }
+                          }}
+                          placeholder={buyTradeMode === "quantity" ? "0.1000" : "1000.00"}
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
+                        <p className="mt-3 text-2xl font-semibold text-white">
+                          {formatCurrency(
+                            metalType === "gold"
+                              ? sipRates.gold?.buyPrice || 0
+                              : sipRates.silver?.buyPrice || 0
+                          )}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleBuyOrder}
+                        className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      >
+                        Continue Buy
+                      </button>
+                    </div>
+                  </div>
+                ) : activeSipAction === "sell" ? (
+                  <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
+                        <p className="mt-1 text-sm text-white/70">
+                          Sell uses the stored profile and bank context from the backend.
+                        </p>
+                      </div>
+                      <div className="rounded-full border border-white/10 bg-[#111] px-4 py-2 text-sm text-white/65">
+                        {formatCurrency(selectedLiveRates.sellPrice || 0)} / unit
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Quantity</p>
+                        <input
+                          value={sellQuantity}
+                          onChange={(event) => setSellQuantity(event.target.value)}
+                          placeholder="0.0500"
+                          className="mt-3 w-full rounded-xl border border-white/10 bg-[#0b0b0b] px-4 py-3 text-white outline-none"
+                        />
+                      </div>
+
+                      <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+                        <p className="text-xs uppercase tracking-[0.22em] text-white/45">Lock Price</p>
+                        <p className="mt-3 text-2xl font-semibold text-white">
+                          {formatCurrency(selectedLiveRates.sellPrice || 0)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <button
+                        type="button"
+                        onClick={handleSellOrder}
+                        className="rounded-full border border-yellow-500/35 px-5 py-2.5 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-500 hover:text-black"
+                      >
+                        Continue Sell
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </Motion.div>
             </div>
 
@@ -838,70 +1133,6 @@ function GoldPriceWidget() {
                   </div>
                 ) : null}
 
-                {buyInvoiceResult && Object.keys(buyInvoiceResult).length > 0 ? (
-                  <div className="mt-6 space-y-6 rounded-3xl border border-white/10 bg-black/25 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-yellow-500/80">
-                          Invoice
-                        </p>
-                        <h4 className="mt-2 text-2xl font-semibold text-white">
-                          {String(buyInvoiceResult?.invoiceNumber || "Invoice fetched successfully")}
-                        </h4>
-                      </div>
-                      <div className="text-right text-sm text-white/55">
-                        <p>{String(buyInvoiceResult?.invoiceDate || "")}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {[
-                        ["Name", buyInvoiceResult?.userInfo?.name],
-                        ["Address", buyInvoiceResult?.userInfo?.address],
-                        ["City", buyInvoiceResult?.userInfo?.city],
-                        ["State", buyInvoiceResult?.userInfo?.state],
-                        ["Pincode", buyInvoiceResult?.userInfo?.pincode],
-                        ["Email", buyInvoiceResult?.userInfo?.email],
-                        ["Mobile Number", buyInvoiceResult?.userInfo?.mobileNumber],
-                        ["Unique ID", buyInvoiceResult?.userInfo?.uniqueId],
-                        ["Transaction ID", buyInvoiceResult?.transactionId],
-                        ["Quantity", buyInvoiceResult?.quantity],
-                        ["Metal Type", buyInvoiceResult?.metalType],
-                        ["HSN Code", buyInvoiceResult?.hsnCode],
-                        ["Rate", buyInvoiceResult?.rate],
-                        ["Unit Type", buyInvoiceResult?.unitType],
-                        ["Gross Amount", buyInvoiceResult?.grossAmount],
-                        ["Net Amount", buyInvoiceResult?.netAmount]
-                      ].map(([label, value]) => (
-                        <div key={label} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                          <p className="text-xs uppercase tracking-[0.22em] text-white/45">{label}</p>
-                          <p className="mt-2 break-words text-sm text-white">{String(value || "-")}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {Array.isArray(buyInvoiceResult?.taxes?.taxSplit) ? (
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-yellow-500/80">Taxes</p>
-                        <div className="mt-4 grid gap-4 md:grid-cols-3">
-                          <div className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                            <p className="text-xs uppercase tracking-[0.22em] text-white/45">Total Tax Amount</p>
-                            <p className="mt-2 text-sm text-white">
-                              {String(buyInvoiceResult?.taxes?.totalTaxAmount || "-")}
-                            </p>
-                          </div>
-                          {buyInvoiceResult.taxes.taxSplit.map((tax, index) => (
-                            <div key={`${tax?.type || "tax"}-${index}`} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                              <p className="text-xs uppercase tracking-[0.22em] text-white/45">{String(tax?.type || `Tax ${index + 1}`)}</p>
-                              <p className="mt-2 text-sm text-white">{String(tax?.taxAmount || "-")}</p>
-                              <p className="mt-1 text-xs text-white/45">{String(tax?.taxPerc || "-")}%</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </Motion.div>
             ) : null}
 
@@ -987,70 +1218,6 @@ function GoldPriceWidget() {
                   </div>
                 ) : null}
 
-                {sellInvoiceResult && Object.keys(sellInvoiceResult).length > 0 ? (
-                  <div className="mt-6 space-y-6 rounded-3xl border border-white/10 bg-black/25 p-6">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-yellow-500/80">
-                          Invoice
-                        </p>
-                        <h4 className="mt-2 text-2xl font-semibold text-white">
-                          {String(sellInvoiceResult?.invoiceNumber || "Invoice fetched successfully")}
-                        </h4>
-                      </div>
-                      <div className="text-right text-sm text-white/55">
-                        <p>{String(sellInvoiceResult?.invoiceDate || "")}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      {[
-                        ["Name", sellInvoiceResult?.userInfo?.name],
-                        ["Address", sellInvoiceResult?.userInfo?.address],
-                        ["City", sellInvoiceResult?.userInfo?.city],
-                        ["State", sellInvoiceResult?.userInfo?.state],
-                        ["Pincode", sellInvoiceResult?.userInfo?.pincode],
-                        ["Email", sellInvoiceResult?.userInfo?.email],
-                        ["Mobile Number", sellInvoiceResult?.userInfo?.mobileNumber],
-                        ["Unique ID", sellInvoiceResult?.userInfo?.uniqueId],
-                        ["Transaction ID", sellInvoiceResult?.transactionId],
-                        ["Quantity", sellInvoiceResult?.quantity],
-                        ["Metal Type", sellInvoiceResult?.metalType],
-                        ["HSN Code", sellInvoiceResult?.hsnCode],
-                        ["Rate", sellInvoiceResult?.rate],
-                        ["Unit Type", sellInvoiceResult?.unitType],
-                        ["Gross Amount", sellInvoiceResult?.grossAmount],
-                        ["Net Amount", sellInvoiceResult?.netAmount]
-                      ].map(([label, value]) => (
-                        <div key={label} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                          <p className="text-xs uppercase tracking-[0.22em] text-white/45">{label}</p>
-                          <p className="mt-2 break-words text-sm text-white">{String(value || "-")}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    {Array.isArray(sellInvoiceResult?.taxes?.taxSplit) ? (
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.22em] text-yellow-500/80">Taxes</p>
-                        <div className="mt-4 grid gap-4 md:grid-cols-3">
-                          <div className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                            <p className="text-xs uppercase tracking-[0.22em] text-white/45">Total Tax Amount</p>
-                            <p className="mt-2 text-sm text-white">
-                              {String(sellInvoiceResult?.taxes?.totalTaxAmount || "-")}
-                            </p>
-                          </div>
-                          {sellInvoiceResult.taxes.taxSplit.map((tax, index) => (
-                            <div key={`${tax?.type || "tax"}-${index}`} className="rounded-2xl border border-white/10 bg-[#0b0b0b] p-4">
-                              <p className="text-xs uppercase tracking-[0.22em] text-white/45">{String(tax?.type || `Tax ${index + 1}`)}</p>
-                              <p className="mt-2 text-sm text-white">{String(tax?.taxAmount || "-")}</p>
-                              <p className="mt-1 text-xs text-white/45">{String(tax?.taxPerc || "-")}%</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
               </Motion.div>
             ) : null}
 
@@ -1148,6 +1315,22 @@ function GoldPriceWidget() {
           </div>
         )}
       </div>
+
+      {activeInvoiceModal?.data ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+          onClick={() => setActiveInvoiceModal(null)}
+        >
+          <div
+            className="flex max-h-[90vh] w-full items-center justify-center overflow-y-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mx-auto w-full max-w-5xl">
+              {renderInvoicePanel(activeInvoiceModal.data, activeInvoiceModal.type)}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

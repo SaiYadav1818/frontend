@@ -1316,24 +1316,7 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="bg-white/5 p-6 rounded-xl mt-6">
-          <h3 className="text-lg font-semibold mb-4">Transactions</h3>
-
-          <div className="space-y-3 text-white/70">
-            {loading && <p>Loading activity from backend...</p>}
-            {!loading && backendStats.activities.length === 0 && (
-              <p>Empty transactions.</p>
-            )}
-            {!loading &&
-              backendStats.activities.map((activity) => (
-                <div key={activity.id} className="rounded-lg border border-white/10 p-3">
-                  <p className="text-white">{activity.title}</p>
-                  <p className="text-sm text-white/60">{activity.subtitle}</p>
-                  <p className="text-xs text-white/40">{activity.date}</p>
-                </div>
-              ))}
-          </div>
-        </div>
+      
       </div>
     </div>
   );
