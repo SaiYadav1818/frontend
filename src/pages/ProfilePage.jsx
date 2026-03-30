@@ -135,6 +135,7 @@ export default function Profile() {
   const [ifscCode, setIfscCode] = useState(initialProfile.ifscCode || "");
   const [selectedBankId, setSelectedBankId] = useState("");
   const [bankAction, setBankAction] = useState("create");
+  const [showBankForm, setShowBankForm] = useState(false);
   const [panNumber, setPanNumber] = useState(initialProfile.panNumber || "");
   const [dateOfBirth, setDateOfBirth] = useState(initialProfile.dateOfBirth || "");
   const [nameAsPerPan, setNameAsPerPan] = useState(
@@ -594,6 +595,7 @@ export default function Profile() {
     );
     setBankAction("create");
     setSelectedBankId("");
+    setShowBankForm(false);
   };
 
   const handleEditBank = (bank) => {
@@ -608,6 +610,7 @@ export default function Profile() {
       String(bank?.userBankId || bank?.bankId || bank?.id || "")
     );
     setBankAction("update");
+    setShowBankForm(true);
     setBankMessage("");
   };
 
@@ -656,6 +659,7 @@ export default function Profile() {
     if (selectedBankId === userBankId) {
       setSelectedBankId("");
       setBankAction("create");
+      setShowBankForm(false);
       setAccountNumber("");
       setAccountName(name || "");
       setIfscCode("");
@@ -884,62 +888,12 @@ export default function Profile() {
           </div>
         )}
 
-        <div className="grid md:grid-cols-3 gap-6 mt-6">
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">Total Investment</p>
-            <h3 className="text-2xl font-bold text-yellow-400">
-              {loading
-                ? "Loading..."
-                : currencyFormatter.format(backendStats.investment)}
-            </h3>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">Gold Holdings</p>
-            <h3 className="text-2xl font-bold">
-              {loading ? "Loading..." : `${backendStats.holdings.toFixed(4)}g`}
-            </h3>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">KYC Status</p>
-            <h3 className="text-green-400 font-semibold">
-              {loading ? "Loading..." : backendStats.kycStatus}
-            </h3>
-          </div>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-6 mt-6">
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">Sellable Balance</p>
-            <h3 className="text-2xl font-bold">
-              {loading ? "Loading..." : `${backendStats.sellableBalance.toFixed(4)}g`}
-            </h3>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">Augmont Unique ID</p>
-            <h3 className="text-sm font-semibold break-all">
-              {loading ? "Loading..." : backendStats.linkedProviders.augmontUniqueId || "Not linked"}
-            </h3>
-          </div>
-
-          <div className="bg-white/5 p-6 rounded-xl">
-            <p className="text-white/60">SafeGold Partner User ID</p>
-            <h3 className="text-sm font-semibold break-all">
-              {loading
-                ? "Loading..."
-                : backendStats.linkedProviders.safeGoldPartnerUserId || "Not linked"}
-            </h3>
-          </div>
-        </div>
-
         <div className="mt-6 rounded-xl border border-yellow-400/20 bg-yellow-400/5 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">SafeGold Balance</h3>
+              <h3 className="text-lg font-semibold text-white">Balance</h3>
               <p className="mt-1 text-sm text-white/60">
-                Use this button to fetch the latest SafeGold balance from the wrapper backend.
+                Use this button to fetch the latest balance from the wrapper backend.
               </p>
             </div>
             <button
@@ -975,9 +929,9 @@ export default function Profile() {
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">SafeGold Transactions</h3>
+              <h3 className="text-lg font-semibold text-white">Transactions</h3>
               <p className="mt-1 text-sm text-white/60">
-                Fetch the latest SafeGold transaction history from the wrapper backend.
+                Fetch the latest transaction history from the wrapper backend.
               </p>
             </div>
             <button
@@ -999,9 +953,9 @@ export default function Profile() {
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">Augmont Passbook</h3>
+              <h3 className="text-lg font-semibold text-white">Passbook</h3>
               <p className="mt-1 text-sm text-white/60">
-                Fetch the latest Augmont passbook balances from the wrapper backend.
+                Fetch the latest passbook balances from the wrapper backend.
               </p>
             </div>
             <button
@@ -1038,18 +992,11 @@ export default function Profile() {
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">Augmont Bank Details</h3>
+              <h3 className="text-lg font-semibold text-white">Bank Details</h3>
               <p className="mt-1 text-sm text-white/60">
-                Add, update, or delete your bank account details for Augmont sell flow.
+                Add, update, or delete your bank account details for the sell flow.
               </p>
             </div>
-            <button
-              onClick={handleCreateBank}
-              disabled={loading || bankLoading}
-              className="rounded-lg bg-yellow-400 px-5 py-2 font-semibold text-black disabled:opacity-60"
-            >
-              {bankLoading ? "Saving..." : bankAction === "update" ? "Update Bank Details" : "Save Bank Details"}
-            </button>
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
@@ -1062,10 +1009,11 @@ export default function Profile() {
                 setAccountName(name || "");
                 setIfscCode("");
                 setBankMessage("");
+                setShowBankForm(true);
               }}
-              className="rounded-lg border border-white/10 px-4 py-2 text-sm text-white/80"
+              className="rounded-lg bg-yellow-400 px-4 py-2 text-sm font-semibold text-black disabled:opacity-60"
             >
-              New Bank
+              Add New Bank
             </button>
             {bankAction === "update" ? (
               <div className="rounded-lg border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm text-yellow-100">
@@ -1074,41 +1022,54 @@ export default function Profile() {
             ) : null}
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white/70">
-                Account Number
-              </label>
-              <input
-                value={accountNumber}
-                onChange={(event) => setAccountNumber(event.target.value.replace(/\D/g, ""))}
-                placeholder="Enter account number"
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-              />
+          {showBankForm ? (
+            <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-white/70">
+                    Account Number
+                  </label>
+                  <input
+                    value={accountNumber}
+                    onChange={(event) => setAccountNumber(event.target.value.replace(/\D/g, ""))}
+                    placeholder="Enter account number"
+                    className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-white/70">
+                    Account Name
+                  </label>
+                  <input
+                    value={accountName}
+                    onChange={(event) => setAccountName(event.target.value)}
+                    placeholder="Enter account name"
+                    className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-white/70">
+                    IFSC Code
+                  </label>
+                  <input
+                    value={ifscCode}
+                    onChange={(event) => setIfscCode(event.target.value.toUpperCase())}
+                    placeholder="Enter IFSC code"
+                    className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
+                  />
+                </div>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={handleCreateBank}
+                  disabled={loading || bankLoading}
+                  className="rounded-lg bg-yellow-400 px-5 py-2 font-semibold text-black disabled:opacity-60"
+                >
+                  {bankLoading ? "Saving..." : bankAction === "update" ? "Update Bank Details" : "Save Bank Details"}
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white/70">
-                Account Name
-              </label>
-              <input
-                value={accountName}
-                onChange={(event) => setAccountName(event.target.value)}
-                placeholder="Enter account name"
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-white/70">
-                IFSC Code
-              </label>
-              <input
-                value={ifscCode}
-                onChange={(event) => setIfscCode(event.target.value.toUpperCase())}
-                placeholder="Enter IFSC code"
-                className="w-full rounded-lg border border-white/10 bg-black/30 px-4 py-3 text-white outline-none"
-              />
-            </div>
-          </div>
+          ) : null}
 
           {bankMessage ? (
             <div className="mt-4 rounded-lg border border-white/10 bg-black/20 p-3 text-sm text-white/80">
@@ -1175,9 +1136,9 @@ export default function Profile() {
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-white">Augmont KYC Details</h3>
+              <h3 className="text-lg font-semibold text-white">KYC Details</h3>
               <p className="mt-1 text-sm text-white/60">
-                Add your PAN and date of birth details for Augmont KYC update.
+                Add your PAN and date of birth details for KYC update.
               </p>
             </div>
             <button
@@ -1356,7 +1317,7 @@ export default function Profile() {
         </div>
 
         <div className="bg-white/5 p-6 rounded-xl mt-6">
-          <h3 className="text-lg font-semibold mb-4">SafeGold Transactions</h3>
+          <h3 className="text-lg font-semibold mb-4">Transactions</h3>
 
           <div className="space-y-3 text-white/70">
             {loading && <p>Loading activity from backend...</p>}

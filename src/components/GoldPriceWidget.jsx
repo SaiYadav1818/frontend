@@ -513,16 +513,14 @@ function GoldPriceWidget() {
                     <h3 className="mt-2 text-2xl font-semibold text-white">
                       {metalType === "gold" ? "Gold" : "Silver"} buy and sell view
                     </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
-                      Rates pulled from <code>/api/v1/rates/live</code> for the selected metal.
-                    </p>
+                   
                   </div>
                   <span className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/55">
                     Live
                   </span>
                 </div>
 
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {liveRateCards.map((card, i) => (
                     <Motion.div
                       key={card.title}
@@ -533,13 +531,15 @@ function GoldPriceWidget() {
                       className="rounded-2xl border border-white/10 bg-black/25 p-5 transition-all hover:border-yellow-500/30"
                     >
                       <p className="mb-2 text-sm text-gray-400">{card.title}</p>
-                      <div className="flex items-end justify-between gap-4">
-                        <h4 className="text-3xl font-bold lg:text-4xl">
+                      <div className="flex min-h-[108px] flex-col justify-between gap-3">
+                        <h4 className="min-w-0 break-words text-[1.25rem] font-bold leading-tight lg:text-[1.4rem] xl:text-[1.55rem]">
                           {card.price}
-                          <span className="ml-1 text-lg text-gray-400">{card.sub}</span>
+                          <span className="mt-2 block text-sm font-medium text-gray-400 lg:text-[0.95rem]">
+                            {card.sub}
+                          </span>
                         </h4>
                         {card.extra ? (
-                          <span className={`text-sm ${card.color || "text-gray-400"}`}>
+                          <span className={`text-sm font-medium ${card.color || "text-gray-400"}`}>
                             {card.extra}
                           </span>
                         ) : null}
@@ -694,9 +694,7 @@ function GoldPriceWidget() {
                     <h3 className="mt-2 text-2xl font-semibold text-white">
                       Regular accumulation view
                     </h3>
-                    <p className="mt-2 max-w-xl text-sm leading-6 text-white/55">
-                      Rates pulled from <code>/api/v1/rates/sip</code> and shown separately from live pricing.
-                    </p>
+                    
                   </div>
                   <span className="rounded-full border border-white/10 px-4 py-2 text-xs uppercase tracking-[0.2em] text-white/55">
                     SIP
@@ -714,13 +712,15 @@ function GoldPriceWidget() {
                       className="rounded-2xl border border-white/10 bg-black/25 p-5 transition-all hover:border-yellow-500/30"
                     >
                       <p className="mb-2 text-sm text-gray-400">{card.title}</p>
-                      <div className="flex items-end justify-between gap-4">
-                        <h4 className="text-3xl font-bold lg:text-4xl">
+                      <div className="flex min-h-[108px] flex-col justify-between gap-3">
+                        <h4 className="min-w-0 break-words text-[1.25rem] font-bold leading-tight lg:text-[1.4rem] xl:text-[1.55rem]">
                           {card.price}
-                          <span className="ml-1 text-lg text-gray-400">{card.sub}</span>
+                          <span className="mt-2 block text-sm font-medium text-gray-400 lg:text-[0.95rem]">
+                            {card.sub}
+                          </span>
                         </h4>
                         {card.extra ? (
-                          <span className="text-sm text-gray-400">{card.extra}</span>
+                          <span className="text-sm font-medium text-gray-400">{card.extra}</span>
                         ) : null}
                       </div>
                     </Motion.div>
