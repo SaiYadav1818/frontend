@@ -8,14 +8,11 @@ import {
   createAugmontTransferOrder,
   fetchAugmontBuyInvoice,
   fetchAugmontFdSchemes,
-  fetchAugmontProducts,
   fetchAugmontProductDetail,
   fetchAugmontRedeemOrders,
   fetchAugmontSellInvoice,
   fetchAugmontTransferOrders,
-  fetchAugmontUserProfile,
-  getAugmontSession,
-  getAugmontUser
+  fetchAugmontUserProfile
 } from "../api/augmontApi";
 import {
   confirmSafeGoldRedeem,
@@ -116,13 +113,6 @@ const actionButtonClassName =
 
 const moduleTabs = [
   {
-    id: "augmont",
-    label: "Augmont",
-    eyebrow: "Provider Module",
-    title: "Augmont Workspace",
-    description: "Product discovery, redeem creation, transfers, and workspace data in one focused view."
-  },
-  {
     id: "safegold",
     label: "SafeGold",
     eyebrow: "Provider Module",
@@ -133,12 +123,9 @@ const moduleTabs = [
 
 export default function GoldPlatformPage() {
   const profile = getUserProfile() || {};
-  const augmontUser = getAugmontUser() || {};
-  const session = getAugmontSession() || {};
-
-  const merchantId = session?.merchantId || import.meta.env.VITE_AUGMONT_MERCHANT_ID?.trim() || "";
-  const uniqueId = profile?.uniqueId || augmontUser?.uniqueId || "";
   const partnerUserId = profile?.partnerUserId || "";
+  const merchantId = "";
+  const uniqueId = "";
 
   const [workspaceResult, setWorkspaceResult] = useState({});
   const [workspaceError, setWorkspaceError] = useState("");
@@ -215,16 +202,14 @@ export default function GoldPlatformPage() {
   const [safeGoldResult, setSafeGoldResult] = useState({});
   const [safeGoldError, setSafeGoldError] = useState("");
   const [safeGoldLoading, setSafeGoldLoading] = useState(false);
-  const [activeModule, setActiveModule] = useState("augmont");
+  const [activeModule, setActiveModule] = useState("safegold");
 
   const summary = useMemo(
     () => [
-      { label: "Merchant ID", value: merchantId || "Missing" },
-      { label: "Augmont uniqueId", value: uniqueId || "Missing" },
       { label: "SafeGold partnerUserId", value: partnerUserId || "Missing" },
       { label: "Phone", value: profile?.mobileNumber || "Missing" }
     ],
-    [merchantId, partnerUserId, profile?.mobileNumber, uniqueId]
+    [partnerUserId, profile?.mobileNumber]
   );
 
   const setActionState = (setter, errorSetter) => {
@@ -235,65 +220,10 @@ export default function GoldPlatformPage() {
   const activeModuleMeta = moduleTabs.find((tab) => tab.id === activeModule) || moduleTabs[0];
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadProductOptions = async () => {
-      if (!merchantId) {
-        if (isMounted) {
-          setProductOptions([]);
-        }
-        return;
-      }
-
-      setProductOptionsLoading(true);
-      setProductOptionsError("");
-
-      const response = await fetchAugmontProducts(1, 100, merchantId);
-
-      if (!isMounted) {
-        return;
-      }
-
-      setProductOptionsLoading(false);
-
-      if (!response?.ok) {
-        setProductOptions([]);
-        setProductOptionsError(response?.message || "Unable to load products.");
-        return;
-      }
-
-      setProductOptions(response.products || []);
-      setProductOptionsError("");
-    };
-
-    loadProductOptions();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [merchantId]);
-
-  useEffect(() => {
-    if (!productOptions.length) {
-      return;
-    }
-
-    setSku((currentSku) => {
-      if (currentSku && productOptions.some((product) => product.sku === currentSku)) {
-        return currentSku;
-      }
-
-      return productOptions[0]?.sku || "";
-    });
-
-    setRedeemSku((currentSku) => {
-      if (currentSku && productOptions.some((product) => product.sku === currentSku)) {
-        return currentSku;
-      }
-
-      return productOptions[0]?.sku || "";
-    });
-  }, [productOptions]);
+    setProductOptions([]);
+    setProductOptionsLoading(false);
+    setProductOptionsError("");
+  }, []);
 
   const loadWorkspace = async () => {
     setWorkspaceLoading(true);
