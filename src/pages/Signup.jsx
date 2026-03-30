@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle2, MapPinned, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ShieldCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import RegistrationForm from "../components/RegistrationForm";
 import { sendOtp, setUserProfile, verifyOtp } from "../api/authApi";
@@ -362,42 +362,9 @@ export default function Signup() {
                     One shared onboarding flow for every gold user.
                   </h1>
                   <p className="max-w-lg text-sm leading-7 text-yellow-100/80 md:text-base">
-                    App registration is handled only by the auth backend. We still collect
-                    state and city names here so the later goldplatform onboarding flow can
-                    reuse them, but provider linking now happens only after app login.
+                    Create your account once and continue seamlessly into the gold
+                    experience with your details already in place.
                   </p>
-                </div>
-              </div>
-
-              <div className="mt-10 space-y-4 rounded-[1.75rem] border border-yellow-300/10 bg-white/5 p-5">
-                <div className="flex items-start gap-3">
-                  <MapPinned className="mt-0.5 h-5 w-5 text-yellow-300" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">Backend-driven location data</p>
-                    <p className="mt-1 text-xs leading-6 text-yellow-100/70">
-                      State and city names are stored with the app profile so the wrapper
-                      onboarding screens can use them later without re-entering everything.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-3 border-t border-yellow-300/10 pt-4 text-xs text-yellow-100/70">
-                  <div className="flex items-center justify-between gap-4">
-                    <span>App auth</span>
-                    <span>{otpSent ? "OTP sent" : "Pending"}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Selected state</span>
-                    <span>{formValues.stateName || "Not entered"}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Selected city</span>
-                    <span>{formValues.cityName || "Not entered"}</span>
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span>Registration status</span>
-                    <span>{success ? "Completed" : otpSent ? "OTP pending" : "Details pending"}</span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -412,9 +379,8 @@ export default function Signup() {
                   </div>
                   <h2 className="mt-6 text-3xl font-bold text-white">Registration successful</h2>
                   <p className="mt-3 max-w-lg text-sm leading-7 text-yellow-100/80">
-                    Your app account has been created through the auth backend, and the signup
-                    flow also attempted SafeGold registration with the same name, mobile number,
-                    email, and pincode.
+                    Your account has been created successfully. You can continue to your
+                    dashboard now.
                   </p>
                   {signupWarning ? (
                     <div className="mt-5 max-w-lg rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-sm text-amber-100">
@@ -435,8 +401,8 @@ export default function Signup() {
                     <h2 className="text-3xl font-bold text-white">Register</h2>
                     <p className="text-sm leading-6 text-yellow-100/80">
                       {otpSent
-                        ? "Verify the OTP to complete app registration. On success, the same signup details are also sent to SafeGold registration."
-                        : "Fill your details once. This step completes app registration and also triggers SafeGold registration using the same signup details."}
+                        ? "Verify the OTP to complete your registration."
+                        : "Fill in your details to create your account and continue."}
                     </p>
                   </div>
 

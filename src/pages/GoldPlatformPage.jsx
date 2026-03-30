@@ -204,14 +204,6 @@ export default function GoldPlatformPage() {
   const [safeGoldLoading, setSafeGoldLoading] = useState(false);
   const [activeModule, setActiveModule] = useState("safegold");
 
-  const summary = useMemo(
-    () => [
-      { label: "SafeGold partnerUserId", value: partnerUserId || "Missing" },
-      { label: "Phone", value: profile?.mobileNumber || "Missing" }
-    ],
-    [partnerUserId, profile?.mobileNumber]
-  );
-
   const setActionState = (setter, errorSetter) => {
     errorSetter("");
     setter({});
@@ -666,23 +658,10 @@ export default function GoldPlatformPage() {
         <div className="overflow-hidden rounded-[2.25rem] border border-yellow-500/15 bg-[radial-gradient(circle_at_top_left,_rgba(250,204,21,0.18),_transparent_32%),linear-gradient(135deg,_rgba(255,255,255,0.04),_rgba(255,255,255,0.01))] p-8 shadow-[0_35px_120px_rgba(0,0,0,0.35)]">
           <p className="text-sm uppercase tracking-[0.24em] text-yellow-300">Goldplatform Workspace</p>
           <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Augmont And SafeGold Control Center</h1>
-          <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60">
-            This workspace stays inside goldplatform after app login. Every action here uses your wrapper APIs only and waits for actual user input instead of sending provider-style hardcoded fields.
-          </p>
+          
         </div>
 
-        <Card title="Identifiers" subtitle="Current logged-in mappings available to the wrapper layer">
-          <div className="grid gap-4 md:grid-cols-4">
-            {summary.map((item) => (
-              <div key={item.label} className="rounded-2xl border border-white/8 bg-black/20 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/40">{item.label}</p>
-                <p className="mt-3 break-all text-sm font-medium text-white">{item.value}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        <Card title="Toolkit Modules" subtitle="Switch between provider workspaces without changing the underlying flows.">
+        {/* <Card title="Toolkit Modules" subtitle="Switch between provider workspaces without changing the underlying flows.">
           <div className="flex flex-wrap gap-3">
             {moduleTabs.map((tab) => {
               const isActive = activeModule === tab.id;
@@ -1071,7 +1050,7 @@ export default function GoldPlatformPage() {
               </div>
             )}
           </div>
-        </Card>
+        </Card> */}
       </div>
 
       {isProductModalOpen && skuResult?.sku ? (
