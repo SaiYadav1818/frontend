@@ -613,12 +613,12 @@ function GoldPriceWidget() {
 
                 <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
-                      <p className="mt-1 text-sm text-white/70">
-                        Sell uses the stored profile and bank context from the backend.
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.22em] text-white/45">Sell quantity</p>
+                    <p className="mt-1 text-sm text-white/70">
+                      Click Sell once to open the bank fields, then click Confirm Sell to submit.
+                    </p>
+                  </div>
                     <div className="rounded-full border border-white/10 bg-[#111] px-4 py-2 text-sm text-white/65">
                       {formatCurrency(selectedLiveRates.sellPrice || 0)} / unit
                     </div>
